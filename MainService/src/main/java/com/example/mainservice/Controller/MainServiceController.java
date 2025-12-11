@@ -23,9 +23,15 @@ public class MainServiceController {
     private static final Logger logger = LoggerFactory.getLogger(MainServiceController.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    // przechowujemy ostatnią wiadomość od każdego serwisu
+    // Przechowuje ostatnią wiadomość od każdego serwisu
+    // klucz: nazwa serwisu, wartość: ostatni ServiceMessage
     private final ConcurrentHashMap<String, ServiceMessage> lastMessages = new ConcurrentHashMap<>();
 
+    /**
+     * Odbiera wiadomości WebSocketowe od usług satelitarnych.
+     * Endpoint STOMP: /app/from-service
+     * Broadcastuje odpowiedź na: /topic/main-broadcast
+     */
     @MessageMapping("/from-service")
     @SendTo("/topic/main-broadcast")
     public MainResponse receiveMessage(ServiceMessage message) {
@@ -38,20 +44,28 @@ public class MainServiceController {
         logger.info("   Weight: {}", message.getWeight());
         logger.info("═══════════════════════════════════════════════════════");
 
-        // zapisujemy najnowszą wiadomość od serwisu
+        // Zapisujemy nową wiadomość od serwisu (nadpisujemy poprzednią)
         lastMessages.put(message.getServiceName(), message);
 
+        // Tworzymy odpowiedź do broadcastu WebSocket
         String responseMsg = "MainService ACK: " + message.getContent() + " (from " + message.getServiceName() + ")";
         logger.info(" SENDING RESPONSE: {}", responseMsg);
 
         return new MainResponse(responseMsg);
     }
 
-    // --- Metody głosowania ---
+    /* -------------------------------------------------------------
+     *                     METODY GŁOSOWANIA
+     * ------------------------------------------------------------- */
 
-    // 1) Weighted majority: agregujemy sumy wag dla identycznych contentów, wymagamy >50% sumy wag
+    /**
+     * Weighted majority — oblicza, czy jakaś treść (content) przekracza 50% sumy wag.
+     * Zwraca Optional.empty(), jeśli brak większości.
+     */
     public Optional<String> computeWeightedMajority() {
         Map<String, Double> weightSums = new HashMap<>();
+
+        // Sumujemy wagi według contentu
         lastMessages.values().forEach(msg ->
                 weightSums.merge(msg.getContent(), msg.getWeight(), Double::sum)
         );
@@ -59,95 +73,127 @@ public class MainServiceController {
         double totalWeight = weightSums.values().stream().mapToDouble(Double::doubleValue).sum();
         if (totalWeight == 0) return Optional.empty();
 
+        // Znajdujemy content o największej sumie wag
         Map.Entry<String, Double> maxEntry = weightSums.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .orElse(null);
 
         if (maxEntry == null) return Optional.empty();
 
+        // Warunek większości > 50%
         if (maxEntry.getValue() > totalWeight * 0.5) {
             return Optional.of(maxEntry.getKey());
         } else {
-            return Optional.empty(); // brak większości
+            return Optional.empty();
         }
     }
 
-    // 2) Sampled vote (k losowań proporcjonalnych do wag)
+    /**
+     * Sampled vote — losujemy k głosów proporcjonalnie do wag.
+     * Zwraca content, który najczęściej został wylosowany.
+     *
+     *
+     *
+     */
     public Optional<String> computeSampledVote(int k) {
+
         List<ServiceMessage> messages = new ArrayList<>(lastMessages.values());
         if (messages.isEmpty()) return Optional.empty();
 
-        double sum = messages.stream().mapToDouble(ServiceMessage::getWeight).sum();
-        double[] cumulative = new double[messages.size()];
+        // --- 1. Normalizacja: ignorujemy wagi ujemne lub NaN ---
+        List<ServiceMessage> valid = messages.stream()
+                .filter(m -> m.getWeight() > 0 && !Double.isNaN(m.getWeight())).collect(Collectors.toList());
+
+        if (valid.isEmpty()) return Optional.empty();
+
+        // --- 2. Obliczenie sumy wag ---
+        double sum = valid.stream().mapToDouble(ServiceMessage::getWeight).sum();
+        if (sum <= 0) return Optional.empty();
+
+        // --- 3. Przygotowanie skumulowanej tablicy wag ---
+        double[] cumulative = new double[valid.size()];
         double acc = 0;
-        for (int i = 0; i < messages.size(); i++) {
-            acc += messages.get(i).getWeight();
+        for (int i = 0; i < valid.size(); i++) {
+            acc += valid.get(i).getWeight();
             cumulative[i] = acc;
         }
 
-        // wybór jednego według wag
+        // --- 4. Funkcja wybierająca jedną próbkę (inexact voting core) ---
         java.util.function.Supplier<ServiceMessage> pickOne = () -> {
             double r = ThreadLocalRandom.current().nextDouble() * sum;
             int idx = Arrays.binarySearch(cumulative, r);
+
             if (idx < 0) idx = -idx - 1;
-            if (idx >= messages.size()) idx = messages.size() - 1;
-            return messages.get(idx);
+            if (idx >= valid.size()) idx = valid.size() - 1;
+
+            return valid.get(idx);
         };
 
+        // --- 5. Wykonywanie k losowań ---
         Map<String, Integer> counts = new HashMap<>();
         for (int i = 0; i < k; i++) {
-            ServiceMessage s = pickOne.get();
-            counts.merge(s.getContent(), 1, Integer::sum);
+            String content = pickOne.get().getContent();
+            counts.merge(content, 1, Integer::sum);
         }
 
-        Map.Entry<String, Integer> best = counts.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .orElse(null);
-
-        return best == null ? Optional.empty() : Optional.of(best.getKey());
+        // --- 6. Wybór zwycięzcy ---
+        return counts.entrySet().stream()
+                .max(Map.Entry.<String, Integer>comparingByValue()
+                        .thenComparing(Map.Entry::getKey)) // stabilne łamanie remisu
+                .map(Map.Entry::getKey);
     }
 
-    // 3) Weighted average dla contentów będących liczbami
+
+    /**
+     * Weighted average — oblicza średnią ważoną, jeśli treści są liczbami.
+     * Ignoruje nieliczbowe wiadomości.
+     */
     public OptionalDouble computeWeightedAverageForNumericValues() {
         double weightedSum = 0;
         double sumWeights = 0;
+
         for (ServiceMessage m : lastMessages.values()) {
             try {
                 double val = Double.parseDouble(m.getContent().trim());
                 weightedSum += val * m.getWeight();
                 sumWeights += m.getWeight();
             } catch (NumberFormatException e) {
-                // pomiń
+                // ignorujemy treści nieliczbowe
             }
         }
+
         if (sumWeights == 0) return OptionalDouble.empty();
         return OptionalDouble.of(weightedSum / sumWeights);
     }
 
-    /* ---------------------- REST endpoint ---------------------- */
+    /* -------------------------------------------------------------
+     *                     REST ENDPOINT
+     * ------------------------------------------------------------- */
 
     /**
      * GET /vote/result
-     * Zwraca JSON z aktualnym wynikiem:
-     * - weightedMajority: content z >50% wag (jeśli istnieje)
-     * - sampledVote_k3: wynik przybliżony przez sampling k=3
-     * - weightedNumericAverage: ważona średnia (jeśli content to liczby)
-     * - totalWeight: suma wag
-     * - lastMessages: tablica ostatnich wiadomości od satelit
+     * Zwraca:
+     * - wynik majority vote
+     * - wynik głosowania próbkującego (k=3)
+     * - średnią ważoną liczbową
+     * - sumę wag
+     * - listę ostatnich wiadomości
      */
     @GetMapping("/vote/result")
     public Map<String, Object> getVoteResult() {
         Map<String, Object> result = new HashMap<>();
+
         result.put("weightedMajority", computeWeightedMajority().orElse("NO_MAJORITY"));
-        // sampled vote z domyślnym k = 3 (możesz zmienić)
         result.put("sampledVote_k3", computeSampledVote(3).orElse("NO_RESULT"));
 
         OptionalDouble avg = computeWeightedAverageForNumericValues();
         result.put("weightedNumericAverage", avg.isPresent() ? avg.getAsDouble() : "N/A");
 
+        // Suma wag wszystkich wiadomości
         double totalWeight = lastMessages.values().stream().mapToDouble(ServiceMessage::getWeight).sum();
         result.put("totalWeight", totalWeight);
 
+        // Zwracamy listę ostatnich wiadomości
         result.put("lastMessages", lastMessages.values().stream()
                 .map(m -> Map.of(
                         "service", m.getServiceName(),
@@ -159,20 +205,24 @@ public class MainServiceController {
 
         return result;
     }
-    /* ---------------------- REST endpoint ---------------------- */
 
-    // Opcjonalny scheduler: co 15s logujemy stan (wymaga @EnableScheduling w aplikacji)
+    /* -------------------------------------------------------------
+     *                   OKRESOWY LOGGER STANU
+     * ------------------------------------------------------------- */
+
+    /**
+     * Co 15 sekund wypisuje wyniki głosowania do logów.
+     * Wymaga @EnableScheduling w klasie aplikacji.
+     */
     @Scheduled(fixedRate = 15000)
     public void periodicVoteCheck() {
         logger.info("Periodic vote check:");
         logger.info(" Weighted majority (threshold 50%): {}", computeWeightedMajority().orElse("NO MAJORITY"));
         logger.info(" Sampled vote (k=3): {}", computeSampledVote(3).orElse("NO RESULT"));
+
         computeWeightedAverageForNumericValues().ifPresentOrElse(
                 v -> logger.info(" Weighted numeric average: {}", v),
                 () -> logger.info(" Weighted numeric average: N/A")
         );
     }
-
-
-
 }

@@ -33,30 +33,45 @@ public class SatelliteClient {
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    // Parametry pobierane z application.properties
     @Value("${satellite.name:Service1}")
     private String serviceName;
 
     @Value("${satellite.weight:2.0}")
     private double weight;
 
+    // Obiekt sesji STOMP (połączenie WebSocket ze śródserwisem MainService)
     private StompSession session;
+
+    // Licznik wysłanych wiadomości
     private final AtomicInteger messageCounter = new AtomicInteger(0);
+
+    // Klient HTTP do komunikacji z bazą JS (Node/Express)
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
+    // Endpoint do pobierania kategorii z JS DB
     private static final String JS_DB_URL =
             "http://localhost:3001/history/1/favorite-category";
 
+    /**
+     * Metoda wykonywana automatycznie po starcie aplikacji.
+     * Nawiązuje połączenie STOMP WebSocket do MainService.
+     */
     @PostConstruct
     public void connect() {
         logger.info("{} starting connection to MainService...", serviceName);
 
+        // Tworzymy WebSocket STOMP clienta (przez SockJS)
         WebSocketStompClient client = new WebSocketStompClient(
-                new SockJsClient(java.util.List.of(
+                new SockJsClient(List.of(
                         new WebSocketTransport(new StandardWebSocketClient())
                 ))
         );
+
+        // Konwerter JSON -> obiekty
         client.setMessageConverter(new MappingJackson2MessageConverter());
 
+        // Asynchroniczne nawiązanie połączenia z websocketem MainService
         CompletableFuture<StompSession> futureSession = client.connectAsync(
                 "ws://localhost:8080/main-ws",
                 new StompSessionHandlerAdapter() {
@@ -67,13 +82,15 @@ public class SatelliteClient {
                 }
         );
 
+        // Po nawiązaniu połączenia...
         futureSession.thenAccept(stompSession -> {
             this.session = stompSession;
 
+            // Subskrypcja broadcastów z MainService
             stompSession.subscribe("/topic/main-broadcast", new StompFrameHandler() {
                 @Override
                 public Type getPayloadType(StompHeaders headers) {
-                    return Object.class;
+                    return Object.class; // payload jest JSON -> mapowany przez Jacksona
                 }
 
                 @Override
@@ -82,6 +99,7 @@ public class SatelliteClient {
                 }
             });
 
+            // Harmonogram wysyłania wiadomości co 15 sekund
             ScheduledExecutorService scheduler =
                     Executors.newSingleThreadScheduledExecutor();
 
@@ -89,29 +107,35 @@ public class SatelliteClient {
                 if (stompSession.isConnected()) {
                     try {
                         int msgNum = messageCounter.incrementAndGet();
+
+                        // Pobranie kategorii z bazy JS
                         String bestCategory = fetchBestCategoryFromJsDb();
 
+                        // Budowanie contentu wiadomości
                         String content =
                                 "MOST_WATCHED_CATEGORY=" + bestCategory;
 
+                        // Obiekt do wysłania
                         ServiceMessage message =
                                 new ServiceMessage(serviceName, content, weight);
 
                         logger.info("Sending message #{}: {}", msgNum, content);
 
+                        // Wysłanie komunikatu STOMP do MainService
                         stompSession.send("/app/from-service", message);
 
                     } catch (Exception e) {
                         logger.error("Error while sending message: {}", e.getMessage());
                     }
                 }
-            }, 15, 15, TimeUnit.SECONDS);
+            }, 15, 15, TimeUnit.SECONDS);  // start po 15s, powtarzaj co 15s
 
         });
     }
 
     /**
-     * Pobiera kategorię z JS bazy (REST API)
+     * Pobiera z JS DB ulubioną kategorię użytkownika.
+     * Zwraca liczbę lub "ERROR", jeśli zapytanie się nie powiedzie.
      */
     private String fetchBestCategoryFromJsDb() {
         try {
@@ -125,11 +149,11 @@ public class SatelliteClient {
 
             String json = response.body();
 
-            // Proste parsowanie JSON bez bibliotek:
-            // {"userId":1,"mostWatchedCategory":10}
+            // Przykładowy JSON: {"userId":1,"mostWatchedCategory":10}
             String key = "\"mostWatchedCategory\":";
             int index = json.indexOf(key) + key.length();
 
+            // Parsowanie proste: usuwamy wszystko co nie-cyfrowe
             return json.substring(index)
                     .replaceAll("[^0-9]", "");
 

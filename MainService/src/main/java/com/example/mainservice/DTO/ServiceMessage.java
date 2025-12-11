@@ -12,3 +12,4 @@ public class ServiceMessage {
     private String content;
     private double weight;
 }
+
