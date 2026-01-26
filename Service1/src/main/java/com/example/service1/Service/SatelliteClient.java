@@ -29,6 +29,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class SatelliteClient {
+    public SatelliteClient() {
+    }
+    public SatelliteClient(String serviceName, double weight, StompSession session) {
+        this.serviceName = serviceName;
+        this.weight = weight;
+        this.session = session;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
