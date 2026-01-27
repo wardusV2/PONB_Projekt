@@ -1,4 +1,4 @@
-package com.example.service5.Service;
+package com.example.service4.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
 import jakarta.annotation.PostConstruct;
@@ -18,32 +18,20 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class SatelliteClient {
-    public SatelliteClient() {
-    }
-    public SatelliteClient(String serviceName, double weight, StompSession session) {
-        this.serviceName = serviceName;
-        this.weight = weight;
-        this.session = session;
-    }
 
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    @Value("${satellite.name:Service1}")
+    @Value("${satellite.name:Service3}")
     private String serviceName;
 
-    @Value("${satellite.weight:2.0}")
+    @Value("${satellite.weight:1.0}")
     private double weight;
 
     private StompSession session;
@@ -51,7 +39,7 @@ public class SatelliteClient {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-category";
+            "http://localhost:3001/history/1/favorite-liked-category";
 
     @PostConstruct
     public void connect() {
@@ -65,7 +53,7 @@ public class SatelliteClient {
         client.setMessageConverter(new MappingJackson2MessageConverter());
 
         CompletableFuture<StompSession> futureSession = client.connectAsync(
-                "ws://localhost:8080/main-ws",
+                "ws://localhost:8081/main-ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
@@ -99,7 +87,7 @@ public class SatelliteClient {
                         String bestCategory = fetchBestCategoryFromJsDb();
 
                         String content =
-                                "MOST_WATCHED_CATEGORY=" + bestCategory;
+                                "MOST_LIKED_CATEGORY=" + bestCategory;
 
                         ServiceMessage message =
                                 new ServiceMessage(serviceName, content, weight);
@@ -117,9 +105,6 @@ public class SatelliteClient {
         });
     }
 
-    /**
-     * Pobiera kategorię z JS bazy (REST API)
-     */
     private String fetchBestCategoryFromJsDb() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -132,9 +117,7 @@ public class SatelliteClient {
 
             String json = response.body();
 
-            // Proste parsowanie JSON bez bibliotek:
-            // {"userId":1,"mostWatchedCategory":10}
-            String key = "\"mostWatchedCategory\":";
+            String key = "\"mostLikedCategory\":";
             int index = json.indexOf(key) + key.length();
 
             return json.substring(index)
