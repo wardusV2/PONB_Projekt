@@ -17,13 +17,13 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
         <module name="MainService" />
-        <module name="Service3 (1)" />
+        <module name="Service4" />
         <module name="Service3" />
         <module name="Service2" />
         <module name="Service1" />
-        <module name="Service2 (1)" />
         <module name="Service7" />
-        <module name="Service1 (1)" />
+        <module name="Service6" />
+        <module name="Service5" />
       </profile>
     </annotationProcessing>
   </component>
@@ -31,11 +31,11 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="MainService" options="-parameters" />
       <module name="Service1" options="-parameters" />
-      <module name="Service1 (1)" options="-parameters" />
       <module name="Service2" options="-parameters" />
-      <module name="Service2 (1)" options="-parameters" />
       <module name="Service3" options="-parameters" />
-      <module name="Service3 (1)" options="-parameters" />
+      <module name="Service4" options="-parameters" />
+      <module name="Service5" options="-parameters" />
+      <module name="Service6" options="-parameters" />
       <module name="Service7" options="-parameters" />
       <module name="safelogin" options="-parameters" />
     </option>
