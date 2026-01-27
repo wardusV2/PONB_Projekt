@@ -15,6 +15,12 @@
         <module name="Service2" />
         <module name="Service1" />
       </profile>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="safelogin" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
@@ -23,6 +29,7 @@
       <module name="Service1" options="-parameters" />
       <module name="Service2" options="-parameters" />
       <module name="Service3" options="-parameters" />
+      <module name="safelogin" options="-parameters" />
     </option>
   </component>
 </project>
