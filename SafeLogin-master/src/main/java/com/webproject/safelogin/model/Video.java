@@ -21,6 +21,9 @@ public class Video {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
     public Video() {
     }
 
@@ -31,6 +34,13 @@ public class Video {
         this.owner = owner;
     }
 
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
     public Integer getId() {
         return id;
     }

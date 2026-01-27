@@ -4,6 +4,7 @@ public class VideoDTO {
     private String title;
     private String url;
     private Integer ownerId;
+    private String category;
 
     public Integer getOwnerId() {
         return ownerId;
@@ -29,6 +30,12 @@ public class VideoDTO {
         this.title = title;
     }
 
+    public String getCategory() {
+        return category;
+    }
 
+    public void setCategory(String category) {
+        this.category = category;
+    }
 
 }

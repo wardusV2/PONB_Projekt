@@ -1,10 +1,7 @@
 package com.webproject.safelogin.controller;
 
 
-import com.webproject.safelogin.model.User;
-import com.webproject.safelogin.model.Video;
-import com.webproject.safelogin.model.VideoDTO;
-import com.webproject.safelogin.model.VideoResponseDTO;
+import com.webproject.safelogin.model.*;
 import com.webproject.safelogin.repository.UserRepository;
 import com.webproject.safelogin.repository.VideoRepository;
 import com.webproject.safelogin.service.SubscriptionService;
@@ -36,6 +33,13 @@ public class VideoController {
         video.setTitle(videoDTO.getTitle());
         video.setUrl(videoDTO.getUrl());
         video.setOwner(owner);
+
+        // ⬇️ NOWE
+        if (videoDTO.getCategory() != null) {
+            video.setCategory(
+                    Category.valueOf(videoDTO.getCategory())
+            );
+        }
 
         videoRepository.save(video);
         return ResponseEntity.ok("Video saved");

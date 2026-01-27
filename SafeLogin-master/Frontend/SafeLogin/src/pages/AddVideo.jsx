@@ -13,6 +13,8 @@ import {
   Image,
   Alert,
   Steps,
+  Select,
+  Radio
 } from 'antd';
 import {
   VideoCameraOutlined,
@@ -39,6 +41,17 @@ const AddVideo = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [urlLoading, setUrlLoading] = useState(false);
   const navigate = useNavigate();
+ 
+  
+  const categories = [
+  { label: 'Gaming', value: 'GAMING' },
+  { label: 'Edukacja', value: 'EDUCATION' },
+  { label: 'Muzyka', value: 'MUSIC' },
+  { label: 'Sport', value: 'SPORT' },
+  { label: 'Filmy', value: 'MOVIES' },
+  { label: 'Technologia', value: 'TECHNOLOGY' },
+  { label: 'Inne', value: 'OTHER' },
+];
 
     useEffect(() => {
         fetch('http://localhost:8080/csrf-token', {
@@ -132,6 +145,7 @@ const AddVideo = () => {
         const payload = {
             title: values.title,
             url: values.url,
+            category: values.category,
             ownerId: user.id
         };
 
@@ -232,6 +246,25 @@ const AddVideo = () => {
               >
                 <Input placeholder="Wpisz tytuł filmu..." onChange={handleTitleChange} showCount maxLength={100} />
               </Form.Item>
+
+              <Form.Item
+                      label="Kategoria"
+                      name="category"
+                      rules={[{ required: true, message: 'Wybierz kategorię filmu' }]}
+                    >
+                      <Radio.Group buttonStyle="solid">
+                        <Space direction="Left" style={{ width: '100%' }}>
+                          <Radio value="GAMING">🎮 Gaming</Radio>
+                          <Radio value="EDUCATION">📚 Edukacja</Radio>
+                          <Radio value="MUSIC">🎵 Muzyka</Radio>
+                          <Radio value="SPORT">⚽ Sport</Radio>
+                          <Radio value="MOVIES">🎬 Filmy</Radio>
+                          <Radio value="TECHNOLOGY">💻 Technologia</Radio>
+                          <Radio value="OTHER">📦 Inne</Radio>
+                        </Space>
+                      </Radio.Group>
+                    </Form.Item>
+
 
               <Form.Item label="Opis (opcjonalnie)" name="description">
                 <TextArea rows={4} placeholder="Dodaj opis filmu..." showCount maxLength={500} />
