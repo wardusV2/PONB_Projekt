@@ -1,4 +1,4 @@
-package com.example.service3.Service;
+package com.example.service7.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
 import jakarta.annotation.PostConstruct;
@@ -18,8 +18,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,12 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SatelliteClient {
 
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    @Value("${satellite.name:Service3}")
+    @Value("${satellite.name:Service7}")
     private String serviceName;
 
-    @Value("${satellite.weight:1.0}")
+    @Value("${satellite.weight:0.8}")
     private double weight;
 
     private StompSession session;
@@ -40,7 +37,7 @@ public class SatelliteClient {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-liked-category";
+            "http://localhost:3001/history/1/favorite-completed-category";
 
     @PostConstruct
     public void connect() {
@@ -88,7 +85,7 @@ public class SatelliteClient {
                         String bestCategory = fetchBestCategoryFromJsDb();
 
                         String content =
-                                "MOST_LIKED_CATEGORY=" + bestCategory;
+                                "MOST_COMPLETED_CATEGORY=" + bestCategory;
 
                         ServiceMessage message =
                                 new ServiceMessage(serviceName, content, weight);
@@ -118,7 +115,7 @@ public class SatelliteClient {
 
             String json = response.body();
 
-            String key = "\"mostLikedCategory\":";
+            String key = "\"mostCompletedCategory\":";
             int index = json.indexOf(key) + key.length();
 
             return json.substring(index)

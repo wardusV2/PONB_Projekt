@@ -3,7 +3,13 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Annotation profile for Service3" enabled="true">
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="safelogin" />
+      </profile>
+      <profile name="Annotation profile for MainService" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -14,12 +20,8 @@
         <module name="Service3" />
         <module name="Service2" />
         <module name="Service1" />
-      </profile>
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <module name="safelogin" />
+        <module name="Service7" />
+        <module name="Service6" />
       </profile>
     </annotationProcessing>
   </component>
@@ -29,6 +31,8 @@
       <module name="Service1" options="-parameters" />
       <module name="Service2" options="-parameters" />
       <module name="Service3" options="-parameters" />
+      <module name="Service6" options="-parameters" />
+      <module name="Service7" options="-parameters" />
       <module name="safelogin" options="-parameters" />
     </option>
   </component>

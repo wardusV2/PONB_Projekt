@@ -54,7 +54,7 @@ public class SatelliteClient {
         client.setMessageConverter(new MappingJackson2MessageConverter());
 
         CompletableFuture<StompSession> futureSession = client.connectAsync(
-                "ws://localhost:8081/main-ws",
+                "ws://localhost:8080/main-ws",
                 new StompSessionHandlerAdapter() {
                     @Override
                     public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
