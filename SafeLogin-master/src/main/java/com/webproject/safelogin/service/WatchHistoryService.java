@@ -67,6 +67,7 @@ public class WatchHistoryService {
                             video.getTitle(),                 // title
                             video.getUrl(),                   // url
                             owner.getNick(),                  // ownerNick
+                            video.getCategory().name(),       // Category
                             h.getWatchedAt(),                 // watchedAt
                             h.getLastPositionSeconds()        // lastPositionSeconds
                     );

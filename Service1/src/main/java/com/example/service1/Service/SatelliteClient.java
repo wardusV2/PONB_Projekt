@@ -1,6 +1,9 @@
-package com.example.service5.Service;
+package com.example.service1.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
+import com.example.service1.DTO.WatchHistoryDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +23,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Component
 public class SatelliteClient {
@@ -50,8 +56,8 @@ public class SatelliteClient {
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-category";
+    private static final String WATCH_HISTORY_URL =
+            "http://localhost:8080/api/history/get/1";
 
     @PostConstruct
     public void connect() {
@@ -96,7 +102,8 @@ public class SatelliteClient {
                 if (stompSession.isConnected()) {
                     try {
                         int msgNum = messageCounter.incrementAndGet();
-                        String bestCategory = fetchBestCategoryFromJsDb();
+                        List<WatchHistoryDTO> history = fetchWatchHistory();
+                        String bestCategory = calculateMostWatchedCategory(history);
 
                         String content =
                                 "MOST_WATCHED_CATEGORY=" + bestCategory;
@@ -118,31 +125,42 @@ public class SatelliteClient {
     }
 
     /**
-     * Pobiera kategorię z JS bazy (REST API)
+     * Pobiera kategorię z MySQL bazy (REST API)
      */
-    private String fetchBestCategoryFromJsDb() {
+    private List<WatchHistoryDTO> fetchWatchHistory() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(JS_DB_URL))
+                    .uri(URI.create(WATCH_HISTORY_URL))
+                    .header("X-SERVICE-KEY", "SUPER_SECRET_SERVICE_KEY_123")
                     .GET()
                     .build();
 
             HttpResponse<String> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            String json = response.body();
+            logger.info("HTTP status: {}", response.statusCode());
+            logger.info("HTTP body: {}", response.body());
 
-            // Proste parsowanie JSON bez bibliotek:
-            // {"userId":1,"mostWatchedCategory":10}
-            String key = "\"mostWatchedCategory\":";
-            int index = json.indexOf(key) + key.length();
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JavaTimeModule());
 
-            return json.substring(index)
-                    .replaceAll("[^0-9]", "");
+            return Arrays.asList(
+                    mapper.readValue(response.body(), WatchHistoryDTO[].class)
+            );
 
         } catch (Exception e) {
-            logger.error("JS DB unavailable: {}", e.getMessage());
-            return "ERROR";
+            logger.error("Cannot fetch watch history", e);
+            return List.of();
         }
+    }
+    private String calculateMostWatchedCategory(List<WatchHistoryDTO> history) {
+        return history.stream()
+                .filter(h -> h.getCategory() != null)
+                .collect(Collectors.groupingBy(WatchHistoryDTO::getCategory, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("NONE");
     }
 }

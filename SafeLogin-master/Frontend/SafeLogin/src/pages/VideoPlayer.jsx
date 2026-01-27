@@ -142,6 +142,7 @@ const VideoPlayer = () => {
               withCredentials: true,
               headers: { 
                 "X-XSRF-TOKEN": csrfToken,
+                "X-SERVICE-KEY": "SUPER_SECRET_SERVICE_KEY_123", // edpoint api/history/* jest zabezpieczony dla service,  X-SERVICE-KEY jest potrzebny do autoryzacji
                 "Content-Type": "application/json"
               }
             }

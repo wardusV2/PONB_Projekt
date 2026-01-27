@@ -50,15 +50,4 @@ public class SubscriptionController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("getSubscribers/{userId}")
-    public ResponseEntity<List<Map<String, String>>> getSubscribers(@PathVariable Integer userId) {
-        Set<User> subscribers = subscriptionService.getSubscribers(userId);
-        List<Map<String, String>> result = subscribers.stream().map(user -> {
-            Map<String, String> data = new HashMap<>();
-            data.put("email", user.getEmail());
-            data.put("username", user.getNick());
-            return data;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(result);
-    }
 }

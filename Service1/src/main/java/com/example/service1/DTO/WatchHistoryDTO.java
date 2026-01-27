@@ -1,37 +1,21 @@
-package com.webproject.safelogin.model;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
+package com.example.service1.DTO;
 
 import java.time.LocalDateTime;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class WatchHistoryDTO {
 
     private Integer videoId;
     private String title;
     private String url;
     private String ownerNick;
-    private String category;
+    private String category;          // ✅ NOWE
     private LocalDateTime watchedAt;
     private Long lastPositionSeconds;
 
-    public WatchHistoryDTO(
-            Integer videoId,
-            String title,
-            String url,
-            String ownerNick,
-            String category,
-            LocalDateTime watchedAt,
-            Long lastPositionSeconds
-    ) {
-        this.videoId = videoId;
-        this.title = title;
-        this.url = url;
-        this.ownerNick = ownerNick;
-        this.category = category;
-        this.watchedAt = watchedAt;
-        this.lastPositionSeconds = lastPositionSeconds;
-    }
+    public WatchHistoryDTO() {}
+
+    // gettery / settery
+
 
     public Integer getVideoId() {
         return videoId;
@@ -65,6 +49,14 @@ public class WatchHistoryDTO {
         this.ownerNick = ownerNick;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
     public LocalDateTime getWatchedAt() {
         return watchedAt;
     }
@@ -80,13 +72,4 @@ public class WatchHistoryDTO {
     public void setLastPositionSeconds(Long lastPositionSeconds) {
         this.lastPositionSeconds = lastPositionSeconds;
     }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-    // gettery
 }
