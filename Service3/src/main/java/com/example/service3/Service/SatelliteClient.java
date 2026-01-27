@@ -1,4 +1,4 @@
-package com.example.service4.Service;
+package com.example.service3.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
 import jakarta.annotation.PostConstruct;
