@@ -75,75 +75,71 @@ const Recommendation = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchRecommendedVideos = async () => {
-      try {
-        setLoading(true);
+  const fetchRecommendedVideos = async () => {
+    try {
+      setLoading(true);
 
-        /* 1️⃣ AUTH */
-        const authRes = await fetch('http://localhost:8080/check-auth', {
-          credentials: 'include'
-        });
-        if (!authRes.ok) throw new Error('Nieautoryzowany użytkownik');
-        const user = await authRes.json();
+      /* 1️⃣ AUTH */
+      const authRes = await fetch('http://localhost:8080/check-auth', {
+        credentials: 'include'
+      });
+      if (!authRes.ok) throw new Error('Nieautoryzowany użytkownik');
+      const user = await authRes.json();
 
-        /* 2️⃣ RECOMMENDATIONS USERA */
-        const recRes = await fetch(
-          `http://localhost:8080/recommendations/user/${user.id}`,
-          {
-            credentials: 'include',
-            headers: {
-              'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
-            }
+      /* 2️⃣ NAJNOWSZA REKOMENDACJA */
+      const recRes = await fetch(
+        `http://localhost:8080/recommendations/user/${user.id}/latest`,
+        {
+          credentials: 'include',
+          headers: {
+            'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
           }
-        );
-        if (!recRes.ok) throw new Error('Brak rekomendacji');
-        const recommendations = await recRes.json();
-
-        if (!recommendations.length) {
-          setVideos([]);
-          setFilteredVideos([]);
-          return;
         }
+      );
 
-        /* 3️⃣ NAJCZĘSTSZA KATEGORIA */
-        const categoryCount = {};
-        recommendations.forEach(r => {
-          categoryCount[r.category] = (categoryCount[r.category] || 0) + 1;
-        });
-
-        const topCategory = Object.entries(categoryCount)
-          .sort((a, b) => b[1] - a[1])[0][0];
-
-        /* 4️⃣ FILMY Z KATEGORII */
-        const videoRes = await fetch(
-          `http://localhost:8080/videos/category/${topCategory}`,
-          {
-            credentials: 'include',
-            headers: {
-              'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
-            }
-          }
-        );
-        if (!videoRes.ok) throw new Error('Brak filmów w kategorii');
-
-        const videosByCategory = await videoRes.json();
-
-        /* 5️⃣ LOSOWE 3 */
-        const randomVideos = getRandomItems(videosByCategory, 3);
-
-        setVideos(randomVideos);
-        setFilteredVideos(randomVideos);
-
-      } catch (err) {
-        console.error(err);
-        message.error(err.message || 'Błąd ładowania rekomendacji');
-      } finally {
-        setLoading(false);
+      if (recRes.status === 204) {
+        setVideos([]);
+        setFilteredVideos([]);
+        return;
       }
-    };
 
-    fetchRecommendedVideos();
-  }, []);
+      if (!recRes.ok) throw new Error('Brak rekomendacji');
+
+      const latestRecommendation = await recRes.json();
+      const category = latestRecommendation.category;
+
+      /* 3️⃣ FILMY Z TEJ KATEGORII */
+      const videoRes = await fetch(
+        `http://localhost:8080/videos/category/${category}`,
+        {
+          credentials: 'include',
+          headers: {
+            'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
+          }
+        }
+      );
+
+      if (!videoRes.ok) throw new Error('Brak filmów w kategorii');
+
+      const videosByCategory = await videoRes.json();
+
+      /* 4️⃣ LOSOWE 3 */
+      const randomVideos = getRandomItems(videosByCategory, 3);
+
+      setVideos(randomVideos);
+      setFilteredVideos(randomVideos);
+
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || 'Błąd ładowania rekomendacji');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchRecommendedVideos();
+}, []);
+
 
   /* ===================== FILTER ===================== */
 

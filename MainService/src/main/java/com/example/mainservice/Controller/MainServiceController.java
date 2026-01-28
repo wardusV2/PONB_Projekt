@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @RestController
@@ -30,13 +29,20 @@ public class MainServiceController {
 
     private final RecommendationClient recommendationClient;
 
-    public MainServiceController(RecommendationClient recommendationClient) {
+    public MainServiceController(
+            RecommendationClient recommendationClient
+    ) {
         this.recommendationClient = recommendationClient;
     }
 
-    // ostatnia wiadomość od każdego serwisu
-    private final ConcurrentHashMap<String, ServiceMessage> lastMessages =
-            new ConcurrentHashMap<>();
+    /* ============================================================
+       ===============  STORAGE (FIXED)  ==========================
+       ============================================================ */
+
+    // userId -> (serviceName -> last message)
+    private final ConcurrentHashMap<Integer,
+            ConcurrentHashMap<String, ServiceMessage>>
+            lastMessagesPerUser = new ConcurrentHashMap<>();
 
     /* ============================================================
        ===============  WEBSOCKET ENDPOINT  =======================
@@ -55,7 +61,21 @@ public class MainServiceController {
         logger.info(" Weight: {}", message.getWeight());
         logger.info("══════════════════════════════════════");
 
-        lastMessages.put(message.getServiceName(), message);
+        extractPayload(message).ifPresent(payload -> {
+
+            lastMessagesPerUser
+                    .computeIfAbsent(
+                            payload.userId(),
+                            id -> new ConcurrentHashMap<>()
+                    )
+                    .put(message.getServiceName(), message);
+
+            logger.info(
+                    "Stored message → user={}, service={}",
+                    payload.userId(),
+                    message.getServiceName()
+            );
+        });
 
         return new MainResponse("ACK from MainService");
     }
@@ -65,8 +85,9 @@ public class MainServiceController {
        ============================================================ */
 
     @SuppressWarnings("unchecked")
-    private Optional<UserCategoryPayload> extractPayload(ServiceMessage msg) {
-
+    private Optional<UserCategoryPayload> extractPayload(
+            ServiceMessage msg
+    ) {
         if (!(msg.getContent() instanceof Map<?, ?> map)) {
             return Optional.empty();
         }
@@ -79,7 +100,9 @@ public class MainServiceController {
                 return Optional.empty();
             }
 
-            return Optional.of(new UserCategoryPayload(userId, category));
+            return Optional.of(
+                    new UserCategoryPayload(userId, category)
+            );
 
         } catch (Exception e) {
             return Optional.empty();
@@ -90,20 +113,27 @@ public class MainServiceController {
        ===============  WEIGHTED MAJORITY  ========================
        ============================================================ */
 
-    public Optional<String> computeWeightedMajorityForUser(Integer userId) {
+    public Optional<String> computeWeightedMajorityForUser(
+            Integer userId
+    ) {
+
+        Map<String, ServiceMessage> userMessages =
+                lastMessagesPerUser.get(userId);
+
+        if (userMessages == null || userMessages.isEmpty()) {
+            return Optional.empty();
+        }
 
         Map<String, Double> weightSums = new HashMap<>();
 
-        lastMessages.values().forEach(msg ->
-                extractPayload(msg).ifPresent(payload -> {
-                    if (payload.userId().equals(userId)) {
+        userMessages.values().forEach(msg ->
+                extractPayload(msg).ifPresent(payload ->
                         weightSums.merge(
                                 payload.category(),
                                 msg.getWeight(),
                                 Double::sum
-                        );
-                    }
-                })
+                        )
+                )
         );
 
         double totalWeight = weightSums.values()
@@ -111,7 +141,9 @@ public class MainServiceController {
                 .mapToDouble(Double::doubleValue)
                 .sum();
 
-        if (totalWeight == 0) return Optional.empty();
+        if (totalWeight == 0) {
+            return Optional.empty();
+        }
 
         return weightSums.entrySet()
                 .stream()
@@ -121,129 +153,61 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  SAMPLED VOTE  =============================
-       ============================================================ */
-
-    public Optional<String> computeSampledVoteForUser(Integer userId, int k) {
-
-        List<ServiceMessage> messages = lastMessages.values()
-                .stream()
-                .filter(m -> extractPayload(m)
-                        .map(p -> p.userId().equals(userId))
-                        .orElse(false))
-                .toList();
-
-        if (messages.isEmpty()) return Optional.empty();
-
-        double totalWeight =
-                messages.stream().mapToDouble(ServiceMessage::getWeight).sum();
-
-        double[] cumulative = new double[messages.size()];
-        double acc = 0;
-
-        for (int i = 0; i < messages.size(); i++) {
-            acc += messages.get(i).getWeight();
-            cumulative[i] = acc;
-        }
-
-        Map<String, Integer> counts = new HashMap<>();
-
-        for (int i = 0; i < k; i++) {
-            double r = ThreadLocalRandom.current().nextDouble() * totalWeight;
-            int idx = Arrays.binarySearch(cumulative, r);
-            if (idx < 0) idx = -idx - 1;
-            idx = Math.min(idx, messages.size() - 1);
-
-            ServiceMessage msg = messages.get(idx);
-            String category = extractPayload(msg).get().category();
-
-            counts.merge(category, 1, Integer::sum);
-        }
-
-        return counts.entrySet()
-                .stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey);
-    }
-
-    /* ============================================================
-       ===============  REST ENDPOINT  =============================
+       ===============  REST DEBUG ENDPOINT  ======================
        ============================================================ */
 
     @GetMapping("/vote/result")
     public Map<String, Object> getVoteResult() {
 
-        Integer userId = 1; // NA RAZIE SZTYWNO
-
         Map<String, Object> result = new HashMap<>();
 
         result.put(
-                "userId",
-                userId
+                "users",
+                lastMessagesPerUser.keySet()
         );
 
         result.put(
-                "weightedMajority",
-                computeWeightedMajorityForUser(userId)
-                        .orElse("NO_MAJORITY")
-        );
-
-        result.put(
-                "sampledVote_k3",
-                computeSampledVoteForUser(userId, 3)
-                        .orElse("NO_RESULT")
-        );
-
-        result.put(
-                "totalWeight",
-                lastMessages.values()
+                "votes",
+                lastMessagesPerUser.entrySet()
                         .stream()
-                        .mapToDouble(ServiceMessage::getWeight)
-                        .sum()
-        );
-
-        result.put(
-                "lastMessages",
-                lastMessages.values()
-                        .stream()
-                        .map(m -> Map.of(
-                                "service", m.getServiceName(),
-                                "payload", m.getContent(),
-                                "weight", m.getWeight()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                e -> computeWeightedMajorityForUser(
+                                        e.getKey()
+                                ).orElse("NO_MAJORITY")
                         ))
-                        .collect(Collectors.toList())
         );
 
         return result;
     }
 
     /* ============================================================
-       ===============  SCHEDULER (opcjonalny)  ===================
+       ===============  SCHEDULER  ================================
        ============================================================ */
 
     @Scheduled(fixedRate = 15000)
     public void periodicVoteCheck() {
 
-        Integer userId = 1;
+        lastMessagesPerUser.keySet().forEach(userId ->
 
-        computeWeightedMajorityForUser(userId)
-                .ifPresentOrElse(
-                        category -> {
-                            logger.info("Majority category: {}", category);
-                            recommendationClient.saveRecommendation(userId, category);
-                        },
-                        () -> logger.info("No majority yet")
-                );
-    }
-    public void persistRecommendationIfPresent(Integer userId) {
-
-        computeWeightedMajorityForUser(userId)
-                .ifPresent(category -> {
-                    logger.info(
-                            "Persisting recommendation → user={}, category={}",
-                            userId, category
-                    );
-                    recommendationClient.saveRecommendation(userId, category);
-                });
+                computeWeightedMajorityForUser(userId)
+                        .ifPresentOrElse(
+                                category -> {
+                                    logger.info(
+                                            "Majority → user={}, category={}",
+                                            userId, category
+                                    );
+                                    recommendationClient
+                                            .saveRecommendation(
+                                                    userId,
+                                                    category
+                                            );
+                                },
+                                () -> logger.info(
+                                        "No majority yet for user {}",
+                                        userId
+                                )
+                        )
+        );
     }
 }

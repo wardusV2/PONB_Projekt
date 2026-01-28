@@ -34,5 +34,15 @@ public class RecommendationController {
         recommendationService.addRecommendation(userId, category);
         return ResponseEntity.ok().build();
     }
+    @GetMapping("/user/{userId}/latest")
+    public ResponseEntity<RecommendationDTO> getLatestUserRecommendation(
+            @PathVariable int userId) {
 
+        RecommendationDTO dto = recommendationService.getLatestRecommendation(userId);
+        if (dto == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(dto);
+    }
 }

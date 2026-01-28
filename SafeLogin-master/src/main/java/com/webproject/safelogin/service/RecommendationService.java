@@ -18,7 +18,7 @@ public class RecommendationService {
     private final UserRepository userRepository;
 
     public RecommendationService(RecommendationRepository recommendationRepository,
-                                     UserRepository userRepository) {
+                                 UserRepository userRepository) {
         this.recommendationRepository = recommendationRepository;
         this.userRepository = userRepository;
     }
@@ -45,5 +45,16 @@ public class RecommendationService {
 
         Recommendation recommendation = new Recommendation(user, categoryEnum);
         recommendationRepository.save(recommendation);
+    }
+
+    public RecommendationDTO getLatestRecommendation(int userId) {
+        return recommendationRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
+                .map(r -> new RecommendationDTO(
+                        r.getCategory().name(),
+                        r.getCreatedAt()
+                ))
+                .orElse(null);
+
+
     }
 }

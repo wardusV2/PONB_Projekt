@@ -2,6 +2,7 @@ package com.example.service1.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
 import com.example.service1.DTO.MostWatchedCategoryMessage;
+import com.example.service1.DTO.UserDTO;
 import com.example.service1.DTO.WatchHistoryDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -22,30 +23,25 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Component
 public class SatelliteClient {
-    public SatelliteClient() {
-    }
-    public SatelliteClient(String serviceName, double weight, StompSession session) {
-        this.serviceName = serviceName;
-        this.weight = weight;
-        this.session = session;
-    }
 
-    private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final Logger logger =
+            LoggerFactory.getLogger(SatelliteClient.class);
+
+    private static final String SERVICE_API_KEY =
+            "SUPER_SECRET_SERVICE_KEY_123";
+
+    private static final String USERS_URL =
+            "http://localhost:8080/api/users/all";
+
+    private static final String WATCH_HISTORY_BASE_URL =
+            "http://localhost:8080/api/history/get/";
 
     @Value("${satellite.name:Service1}")
     private String serviceName;
@@ -56,109 +52,187 @@ public class SatelliteClient {
     private StompSession session;
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper mapper = new ObjectMapper();
 
-    private static final String WATCH_HISTORY_URL =
-            "http://localhost:8080/api/history/get/1";
+    public SatelliteClient() {
+        mapper.registerModule(new JavaTimeModule());
+    }
 
+    /* =========================================================
+       🚀 CONNECT TO MAIN SERVICE
+       ========================================================= */
     @PostConstruct
     public void connect() {
-        logger.info("{} starting connection to MainService...", serviceName);
+
+        logger.info("{} connecting to MainService...", serviceName);
 
         WebSocketStompClient client = new WebSocketStompClient(
-                new SockJsClient(java.util.List.of(
+                new SockJsClient(List.of(
                         new WebSocketTransport(new StandardWebSocketClient())
                 ))
         );
-        client.setMessageConverter(new MappingJackson2MessageConverter());
 
-        CompletableFuture<StompSession> futureSession = client.connectAsync(
+        client.setMessageConverter(
+                new MappingJackson2MessageConverter()
+        );
+
+        client.connectAsync(
                 "ws://localhost:8081/main-ws",
                 new StompSessionHandlerAdapter() {
+
                     @Override
-                    public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-                        logger.info("{} CONNECTED to MainService", serviceName);
+                    public void afterConnected(
+                            StompSession session,
+                            StompHeaders headers
+                    ) {
+                        logger.info("{} CONNECTED", serviceName);
+                        SatelliteClient.this.session = session;
+                        startSendingLoop();
                     }
                 }
         );
-
-        futureSession.thenAccept(stompSession -> {
-            this.session = stompSession;
-
-            stompSession.subscribe("/topic/main-broadcast", new StompFrameHandler() {
-                @Override
-                public Type getPayloadType(StompHeaders headers) {
-                    return Object.class;
-                }
-
-                @Override
-                public void handleFrame(StompHeaders headers, Object payload) {
-                    logger.info("{} RECEIVED: {}", serviceName, payload);
-                }
-            });
-
-            ScheduledExecutorService scheduler =
-                    Executors.newSingleThreadScheduledExecutor();
-
-            scheduler.scheduleAtFixedRate(() -> {
-                if (stompSession.isConnected()) {
-                    try {
-                        int msgNum = messageCounter.incrementAndGet();
-                        int userId = 1;
-                        List<WatchHistoryDTO> history = fetchWatchHistory();
-                        String bestCategory = calculateMostWatchedCategory(history);
-
-                        MostWatchedCategoryMessage payload =
-                                new MostWatchedCategoryMessage(userId, bestCategory);
-
-                        ServiceMessage message =
-                                new ServiceMessage(serviceName, payload, weight);
-
-                        logger.info("Sending message #{}: {}", msgNum, payload);
-
-                        stompSession.send("/app/from-service", message);
-
-                    } catch (Exception e) {
-                        logger.error("Error while sending message: {}", e.getMessage());
-                    }
-                }
-            }, 15, 15, TimeUnit.SECONDS);
-
-        });
     }
 
-    /**
-     * Pobiera kategorię z MySQL bazy (REST API)
-     */
-    private List<WatchHistoryDTO> fetchWatchHistory() {
+    /* =========================================================
+       🔁 MAIN LOOP
+       ========================================================= */
+    private void startSendingLoop() {
+
+        ScheduledExecutorService scheduler =
+                Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+
+            if (session == null || !session.isConnected()) {
+                logger.warn("WebSocket not connected");
+                return;
+            }
+
+            try {
+                List<UserDTO> users = fetchUsers();
+
+                for (UserDTO user : users) {
+
+                    List<WatchHistoryDTO> history =
+                            fetchWatchHistory(user.id());
+
+                    String bestCategory =
+                            calculateMostWatchedCategory(history);
+
+                    MostWatchedCategoryMessage payload =
+                            new MostWatchedCategoryMessage(
+                                    user.id(),
+                                    bestCategory
+                            );
+
+                    ServiceMessage message =
+                            new ServiceMessage(
+                                    serviceName,
+                                    payload,
+                                    weight
+                            );
+
+                    int msgNum = messageCounter.incrementAndGet();
+
+                    logger.info(
+                            "Sending #{} → user {} → {}",
+                            msgNum,
+                            user.id(),
+                            bestCategory
+                    );
+
+                    session.send("/app/from-service", message);
+
+                    Thread.sleep(300); // 🔥 throttling
+                }
+
+            } catch (Exception e) {
+                logger.error("Error in main loop", e);
+            }
+
+        }, 10, 30, TimeUnit.SECONDS);
+    }
+
+    /* =========================================================
+       👤 FETCH USERS
+       ========================================================= */
+    private List<UserDTO> fetchUsers() {
+
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(WATCH_HISTORY_URL))
-                    .header("X-SERVICE-KEY", "SUPER_SECRET_SERVICE_KEY_123")
+                    .uri(URI.create(USERS_URL))
+                    .header("X-SERVICE-KEY", SERVICE_API_KEY)
                     .GET()
                     .build();
 
             HttpResponse<String> response =
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            logger.info("HTTP status: {}", response.statusCode());
-            logger.info("HTTP body: {}", response.body());
-
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
 
             return Arrays.asList(
-                    mapper.readValue(response.body(), WatchHistoryDTO[].class)
+                    mapper.readValue(
+                            response.body(),
+                            UserDTO[].class
+                    )
             );
 
         } catch (Exception e) {
-            logger.error("Cannot fetch watch history", e);
+            logger.error("Cannot fetch users", e);
             return List.of();
         }
     }
-    private String calculateMostWatchedCategory(List<WatchHistoryDTO> history) {
+
+    /* =========================================================
+       🎬 FETCH WATCH HISTORY
+       ========================================================= */
+    private List<WatchHistoryDTO> fetchWatchHistory(int userId) {
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(
+                            WATCH_HISTORY_BASE_URL + userId
+                    ))
+                    .header("X-SERVICE-KEY", SERVICE_API_KEY)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            WatchHistoryDTO[].class
+                    )
+            );
+
+        } catch (Exception e) {
+            logger.error(
+                    "Cannot fetch watch history for user {}",
+                    userId,
+                    e
+            );
+            return List.of();
+        }
+    }
+
+    /* =========================================================
+       📊 CALCULATE CATEGORY
+       ========================================================= */
+    private String calculateMostWatchedCategory(
+            List<WatchHistoryDTO> history
+    ) {
         return history.stream()
                 .filter(h -> h.getCategory() != null)
-                .collect(Collectors.groupingBy(WatchHistoryDTO::getCategory, Collectors.counting()))
+                .collect(Collectors.groupingBy(
+                        WatchHistoryDTO::getCategory,
+                        Collectors.counting()
+                ))
                 .entrySet()
                 .stream()
                 .max(Map.Entry.comparingByValue())
