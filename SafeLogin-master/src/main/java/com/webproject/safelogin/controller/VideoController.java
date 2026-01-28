@@ -102,6 +102,25 @@ public class VideoController {
                 ))
                 .collect(Collectors.toList());
     }
+    @GetMapping("/videos/category/{category}")
+    public List<VideoResponseDTO> getVideosByCategory(@PathVariable String category) {
+        Category cat;
+        try {
+            cat = Category.valueOf(category.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return List.of(); // jeśli niepoprawna kategoria, zwróć pustą listę
+        }
 
+        return videoRepository.findAll().stream()
+                .filter(video -> video.getCategory() != null && video.getCategory() == cat)
+                .map(video -> new VideoResponseDTO(
+                        video.getId(),
+                        video.getTitle(),
+                        video.getUrl(),
+                        video.getOwner() != null ? video.getOwner().getId() : null,
+                        video.getOwner() != null ? video.getOwner().getNick() : null
+                ))
+                .collect(Collectors.toList());
+    }
 
 }
