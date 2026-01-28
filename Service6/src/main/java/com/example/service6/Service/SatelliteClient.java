@@ -18,6 +18,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,19 +26,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SatelliteClient {
 
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
+    private static final Random random = new Random();
 
     @Value("${satellite.name:Service6}")
     private String serviceName;
 
-    @Value("${satellite.weight:0.7}")
+    @Value("${satellite.weight:0.6}")
     private double weight;
+
+    // Prawdopodobieństwo błędu
+    @Value("${fault.injection.corrupted-data:0.3}")
+    private double corruptedDataProbability;
 
     private StompSession session;
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-longest-watched-category";
+            "http://localhost:3001/history/1/favorite-category";
 
     @PostConstruct
     public void connect() {
@@ -82,10 +88,16 @@ public class SatelliteClient {
                 if (stompSession.isConnected()) {
                     try {
                         int msgNum = messageCounter.incrementAndGet();
+
                         String bestCategory = fetchBestCategoryFromJsDb();
 
-                        String content =
-                                "MOST_LONGEST_WATCHED_CATEGORY=" + bestCategory;
+                        // BŁĄD: Uszkodzone dane - losowa/błędna kategoria
+                        if (random.nextDouble() < corruptedDataProbability) {
+                            bestCategory = String.valueOf(random.nextInt(1000) + 999);
+                            logger.warn("⚠️⚠️⚠️ FAULT INJECTION: Sending CORRUPTED DATA - category: {}", bestCategory);
+                        }
+
+                        String content = "MOST_WATCHED_CATEGORY=" + bestCategory;
 
                         ServiceMessage message =
                                 new ServiceMessage(serviceName, content, weight);
@@ -115,7 +127,7 @@ public class SatelliteClient {
 
             String json = response.body();
 
-            String key = "\"mostLongestWatchedCategory\":";
+            String key = "\"mostWatchedCategory\":";
             int index = json.indexOf(key) + key.length();
 
             return json.substring(index)
