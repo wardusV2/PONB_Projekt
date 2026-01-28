@@ -27,6 +27,9 @@ public class MainServiceController {
     private static final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    // próg niepewności (15%)
+    private static final double EPSILON = 0.15;
+
     private final RecommendationClient recommendationClient;
 
     public MainServiceController(
@@ -36,7 +39,7 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  STORAGE (FIXED)  ==========================
+       ===============  STORAGE  =================================
        ============================================================ */
 
     // userId -> (serviceName -> last message)
@@ -110,10 +113,10 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  WEIGHTED MAJORITY  ========================
+       ===============  APPROXIMATE VOTING  =======================
        ============================================================ */
 
-    public Optional<String> computeWeightedMajorityForUser(
+    public Optional<String> computeApproximateVoteForUser(
             Integer userId
     ) {
 
@@ -136,20 +139,43 @@ public class MainServiceController {
                 )
         );
 
+        if (weightSums.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // tylko jedna kategoria → brak niepewności
+        if (weightSums.size() == 1) {
+            return Optional.of(
+                    weightSums.keySet().iterator().next()
+            );
+        }
+
         double totalWeight = weightSums.values()
                 .stream()
                 .mapToDouble(Double::doubleValue)
                 .sum();
 
-        if (totalWeight == 0) {
+        List<Map.Entry<String, Double>> sorted =
+                weightSums.entrySet()
+                        .stream()
+                        .sorted(
+                                Map.Entry.<String, Double>
+                                                comparingByValue()
+                                        .reversed()
+                        )
+                        .toList();
+
+        double top = sorted.get(0).getValue();
+        double second = sorted.get(1).getValue();
+
+        double relativeDiff = (top - second) / totalWeight;
+
+        if (relativeDiff < EPSILON) {
+            // zbyt mała przewaga → brak decyzji
             return Optional.empty();
         }
 
-        return weightSums.entrySet()
-                .stream()
-                .max(Map.Entry.comparingByValue())
-                .filter(e -> e.getValue() > totalWeight * 0.5)
-                .map(Map.Entry::getKey);
+        return Optional.of(sorted.get(0).getKey());
     }
 
     /* ============================================================
@@ -172,9 +198,9 @@ public class MainServiceController {
                         .stream()
                         .collect(Collectors.toMap(
                                 Map.Entry::getKey,
-                                e -> computeWeightedMajorityForUser(
+                                e -> computeApproximateVoteForUser(
                                         e.getKey()
-                                ).orElse("NO_MAJORITY")
+                                ).orElse("NO_CONFIDENT_VOTE")
                         ))
         );
 
@@ -190,11 +216,11 @@ public class MainServiceController {
 
         lastMessagesPerUser.keySet().forEach(userId ->
 
-                computeWeightedMajorityForUser(userId)
+                computeApproximateVoteForUser(userId)
                         .ifPresentOrElse(
                                 category -> {
                                     logger.info(
-                                            "Majority → user={}, category={}",
+                                            "Approximate vote → user={}, category={}",
                                             userId, category
                                     );
                                     recommendationClient
@@ -204,7 +230,7 @@ public class MainServiceController {
                                             );
                                 },
                                 () -> logger.info(
-                                        "No majority yet for user {}",
+                                        "No confident vote yet for user {}",
                                         userId
                                 )
                         )
