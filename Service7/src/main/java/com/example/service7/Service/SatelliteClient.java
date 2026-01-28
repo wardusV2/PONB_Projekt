@@ -18,26 +18,46 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * SERVICE7
+ *
+ * Algorytm: Połączenie najczęściej subskrybowanej i polubionej kategorii
+ * Endpointy: /history/1/favorite-subscribed-category + /history/1/favorite-liked-category
+ * Port: 8088
+ * Waga: 0.9
+ *
+ * Wstrzykiwany błąd:
+ * CRASH (20%) - Losowe wyłączanie się przy 20% prawdopodobieństwie (System.exit)
+ */
 
 @Component
 public class SatelliteClient {
 
     private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
+    private static final Random random = new Random();
 
     @Value("${satellite.name:Service7}")
     private String serviceName;
 
-    @Value("${satellite.weight:0.8}")
+    @Value("${satellite.weight:0.9}")
     private double weight;
+
+    // Prawdopodobieństwo błędu
+    @Value("${fault.injection.crash:0.2}")
+    private double crashProbability;
 
     private StompSession session;
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-completed-category";
+    private static final String JS_DB_URL_SUBSCRIBED =
+            "http://localhost:3001/history/1/favorite-subscribed-category";
+    private static final String JS_DB_URL_LIKED =
+            "http://localhost:3001/history/1/favorite-liked-category";
 
     @PostConstruct
     public void connect() {
@@ -82,10 +102,16 @@ public class SatelliteClient {
                 if (stompSession.isConnected()) {
                     try {
                         int msgNum = messageCounter.incrementAndGet();
-                        String bestCategory = fetchBestCategoryFromJsDb();
 
-                        String content =
-                                "MOST_COMPLETED_CATEGORY=" + bestCategory;
+                        // BŁĄD: Symulacja crash - zatrzymanie aplikacji
+                        if (random.nextDouble() < crashProbability) {
+                            logger.error("💥 FAULT INJECTION: SERVICE CRASH - Shutting down application!");
+                            System.exit(1); // zatrzymanie aplikacji
+                        }
+
+                        String combinedCategory = fetchCombinedCategoryFromJsDb();
+
+                        String content = "COMBINED_SUBSCRIBED_LIKED_CATEGORY=" + combinedCategory;
 
                         ServiceMessage message =
                                 new ServiceMessage(serviceName, content, weight);
@@ -103,27 +129,37 @@ public class SatelliteClient {
         });
     }
 
-    private String fetchBestCategoryFromJsDb() {
+    private String fetchCombinedCategoryFromJsDb() {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(JS_DB_URL))
-                    .GET()
-                    .build();
+            String subscribedCat = fetchCategoryFromUrl(JS_DB_URL_SUBSCRIBED, "mostSubscribedCategory");
+            String likedCat = fetchCategoryFromUrl(JS_DB_URL_LIKED, "mostLikedCategory");
 
-            HttpResponse<String> response =
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (subscribedCat.equals(likedCat)) {
+                return subscribedCat;
+            }
 
-            String json = response.body();
-
-            String key = "\"mostCompletedCategory\":";
-            int index = json.indexOf(key) + key.length();
-
-            return json.substring(index)
-                    .replaceAll("[^0-9]", "");
+            return subscribedCat + "," + likedCat;
 
         } catch (Exception e) {
             logger.error("JS DB unavailable: {}", e.getMessage());
             return "ERROR";
         }
+    }
+
+    private String fetchCategoryFromUrl(String url, String jsonKey) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+
+        HttpResponse<String> response =
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        String json = response.body();
+        String key = "\"" + jsonKey + "\":";
+        int index = json.indexOf(key) + key.length();
+
+        return json.substring(index)
+                .replaceAll("[^0-9]", "");
     }
 }

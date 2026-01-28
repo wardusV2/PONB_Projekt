@@ -22,6 +22,18 @@ import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * SERVICE6
+ *
+ * Algorytm: Najczęściej oglądana kategoria
+ * Endpoint: /history/1/favorite-category
+ * Port: 8087
+ * Waga: 0.6
+ *
+ * Wstrzykiwany błąd:
+ * CORRUPTED DATA (30%) - Wysyłanie błędnych danych (999-1999) przy 30% prawdopodobieństwie
+ */
+
 @Component
 public class SatelliteClient {
 
