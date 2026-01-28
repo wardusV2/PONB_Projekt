@@ -66,7 +66,7 @@ const VideoPlayer = () => {
         
         // Pobierz video
         const videoRes = await axios.get(`http://localhost:8080/getVideo/${id}`, { 
-          withCredentials: true 
+          withCredentials: true ,
         });
         console.log("✅ Video pobrane:", videoRes.data);
         setVideo(videoRes.data);
@@ -423,7 +423,10 @@ const VideoPlayer = () => {
       if (currentUser && video?.ownerId) {
         try {
           const subRes = await axios.get(`http://localhost:8080/getSubscriptions/${currentUser.id}`, {
-            withCredentials: true
+            withCredentials: true,
+            headers: {
+            'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
+          }
           });
           const isSub = subRes.data.some(u => u.username === video.ownerNick);
           setIsSubscribed(isSub);
@@ -478,7 +481,8 @@ const VideoPlayer = () => {
         {
           withCredentials: true,
           headers: {
-            'X-XSRF-TOKEN': csrfRes.data.csrfToken
+            'X-XSRF-TOKEN': csrfRes.data.csrfToken,
+             'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
           }
         }
       );
@@ -499,7 +503,8 @@ const VideoPlayer = () => {
         {
           withCredentials: true,
           headers: {
-            'X-XSRF-TOKEN': csrfRes.data.csrfToken
+            'X-XSRF-TOKEN': csrfRes.data.csrfToken,
+             'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
           }
         }
       );

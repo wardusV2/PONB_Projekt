@@ -6,13 +6,15 @@ public class VideoResponseDTO {
     private String url;
     private Integer ownerId;
     private String ownerNick;
+    private String category;
 
-    public VideoResponseDTO(Integer id, String title, String url, Integer ownerId, String ownerNick) {
+    public VideoResponseDTO(Integer id, String title, String url, Integer ownerId, String ownerNick, String category) {
         this.id = id;
         this.title = title;
         this.url = url;
         this.ownerId = ownerId;
         this.ownerNick = ownerNick;
+        this.category = category;
     }
 
     public Integer getId() {
@@ -33,5 +35,13 @@ public class VideoResponseDTO {
 
     public String getOwnerNick() {
         return ownerNick;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 }

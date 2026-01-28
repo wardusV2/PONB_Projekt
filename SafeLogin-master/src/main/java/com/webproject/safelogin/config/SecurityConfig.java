@@ -41,7 +41,7 @@ public class SecurityConfig {
     SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
 
         http
-                .securityMatcher("/api/**","/recommendations/**","/api/users/**")
+                .securityMatcher("/api/**","/recommendations/**","/api/users/**", "/subscriber/**","/getSubscriptions/**","/videosByUser/**")
 
                 .csrf(csrf -> csrf.disable())
 

@@ -55,7 +55,8 @@ public class VideoController {
                             video.getTitle(),
                             video.getUrl(),
                             video.getOwner() != null ? video.getOwner().getId() : null,
-                            video.getOwner() != null ? video.getOwner().getNick() : null
+                            video.getOwner() != null ? video.getOwner().getNick() : null,
+                            video.getCategory().name()
                     );
                     return ResponseEntity.ok(dto);
                 })
@@ -69,8 +70,11 @@ public class VideoController {
                         video.getId(),
                         video.getTitle(),
                         video.getUrl(),
-                        video.getOwner() != null ? video.getOwner().getId() : null,
-                        video.getOwner() != null ? video.getOwner().getNick() : null
+                        video.getOwner().getId(),
+                        video.getOwner().getNick(),
+                        video.getCategory() != null
+                                ? video.getCategory().name()
+                                : null
                 ))
                 .collect(Collectors.toList());
     }
@@ -83,7 +87,10 @@ public class VideoController {
                         video.getTitle(),
                         video.getUrl(),
                         video.getOwner().getId(),
-                        video.getOwner().getNick()
+                        video.getOwner().getNick(),
+                        video.getCategory() != null
+                                ? video.getCategory().name()
+                                : null
                 ))
                 .collect(Collectors.toList());
     }
@@ -98,7 +105,10 @@ public class VideoController {
                         video.getTitle(),
                         video.getUrl(),
                         video.getOwner().getId(),
-                        video.getOwner().getNick()
+                        video.getOwner().getNick(),
+                        video.getCategory() != null
+                                ? video.getCategory().name()
+                                : null
                 ))
                 .collect(Collectors.toList());
     }
@@ -117,8 +127,11 @@ public class VideoController {
                         video.getId(),
                         video.getTitle(),
                         video.getUrl(),
-                        video.getOwner() != null ? video.getOwner().getId() : null,
-                        video.getOwner() != null ? video.getOwner().getNick() : null
+                        video.getOwner().getId(),
+                        video.getOwner().getNick(),
+                        video.getCategory() != null
+                                ? video.getCategory().name()
+                                : null
                 ))
                 .collect(Collectors.toList());
     }
