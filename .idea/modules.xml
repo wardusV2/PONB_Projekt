@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/PONB_Projekt.iml" filepath="$PROJECT_DIR$/.idea/PONB_Projekt.iml" />
-      <module fileurl="file://$PROJECT_DIR$/SafeLogin-master/safelogin.iml" filepath="$PROJECT_DIR$/SafeLogin-master/safelogin.iml" />
     </modules>
   </component>
 </project>
