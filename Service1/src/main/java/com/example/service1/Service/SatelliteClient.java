@@ -1,6 +1,7 @@
 package com.example.service1.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
+import com.example.service1.DTO.MostWatchedCategoryMessage;
 import com.example.service1.DTO.WatchHistoryDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -102,16 +103,17 @@ public class SatelliteClient {
                 if (stompSession.isConnected()) {
                     try {
                         int msgNum = messageCounter.incrementAndGet();
+                        int userId = 1;
                         List<WatchHistoryDTO> history = fetchWatchHistory();
                         String bestCategory = calculateMostWatchedCategory(history);
 
-                        String content =
-                                "MOST_WATCHED_CATEGORY=" + bestCategory;
+                        MostWatchedCategoryMessage payload =
+                                new MostWatchedCategoryMessage(userId, bestCategory);
 
                         ServiceMessage message =
-                                new ServiceMessage(serviceName, content, weight);
+                                new ServiceMessage(serviceName, payload, weight);
 
-                        logger.info("Sending message #{}: {}", msgNum, content);
+                        logger.info("Sending message #{}: {}", msgNum, payload);
 
                         stompSession.send("/app/from-service", message);
 

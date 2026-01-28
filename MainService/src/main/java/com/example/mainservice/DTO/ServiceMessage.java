@@ -8,10 +8,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ServiceMessage {
     private String serviceName;
-    private String content;
+    private Object content;
     private double weight;
 
-    public ServiceMessage(String serviceName, String content, double weight) {
+    public ServiceMessage(String serviceName, Object content, double weight) {
         this.serviceName = serviceName;
         this.content = content;
         this.weight = weight;
@@ -25,11 +25,11 @@ public class ServiceMessage {
         this.serviceName = serviceName;
     }
 
-    public String getContent() {
+    public Object getContent() {
         return content;
     }
 
-    public void setContent(String content) {
+    public void setContent(Object content) {
         this.content = content;
     }
 
