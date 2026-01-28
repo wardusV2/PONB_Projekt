@@ -53,7 +53,10 @@ const Profile = () => {
       setUser(userData);
 
       const videosRes = await axios.get(`http://localhost:8080/videosByUser/${userData.id}`, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+            'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
+          }
       });
       setVideos(videosRes.data);
 

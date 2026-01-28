@@ -1,5 +1,6 @@
 package com.webproject.safelogin.controller;
 
+import com.webproject.safelogin.model.SubscriptionDTO;
 import com.webproject.safelogin.model.User;
 import com.webproject.safelogin.service.SubscriptionService;
 import org.springframework.http.ResponseEntity;
@@ -38,16 +39,20 @@ public class SubscriptionController {
         return ResponseEntity.ok("Odsubskrybowano użytkownika " + targetId);
     }
 
-    @GetMapping("getSubscriptions/{userId}")
-    public ResponseEntity<List<Map<String, String>>> getSubscriptions(@PathVariable Integer userId) {
-        Set<User> subscriptions = subscriptionService.getSubscriptions(userId);
-        List<Map<String, String>> result = subscriptions.stream().map(user -> {
-            Map<String, String> data = new HashMap<>();
-            data.put("email", user.getEmail());
-            data.put("username", user.getNick());
-            return data;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(result);
+    @GetMapping("/getSubscriptions/{userId}")
+    public ResponseEntity<List<SubscriptionDTO>> getSubscriptions(
+            @PathVariable Integer userId
+    ) {
+        return ResponseEntity.ok(
+                subscriptionService.getSubscriptions(userId)
+                        .stream()
+                        .map(u -> new SubscriptionDTO(
+                                u.getId(),
+                                u.getNick(),
+                                u.getEmail()
+                        ))
+                        .toList()
+        );
     }
 
 }
