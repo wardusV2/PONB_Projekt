@@ -3,6 +3,7 @@ package com.example.mainservice.Controller;
 import com.example.mainservice.DTO.MainResponse;
 import com.example.mainservice.DTO.ServiceMessage;
 import com.example.mainservice.DTO.UserCategoryPayload;
+import com.example.mainservice.Service.RecommendationClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -26,6 +27,12 @@ public class MainServiceController {
 
     private static final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    private final RecommendationClient recommendationClient;
+
+    public MainServiceController(RecommendationClient recommendationClient) {
+        this.recommendationClient = recommendationClient;
+    }
 
     // ostatnia wiadomość od każdego serwisu
     private final ConcurrentHashMap<String, ServiceMessage> lastMessages =
@@ -216,9 +223,27 @@ public class MainServiceController {
 
     @Scheduled(fixedRate = 15000)
     public void periodicVoteCheck() {
-        logger.info(
-                "Periodic check → majority: {}",
-                computeWeightedMajorityForUser(1).orElse("NONE")
-        );
+
+        Integer userId = 1;
+
+        computeWeightedMajorityForUser(userId)
+                .ifPresentOrElse(
+                        category -> {
+                            logger.info("Majority category: {}", category);
+                            recommendationClient.saveRecommendation(userId, category);
+                        },
+                        () -> logger.info("No majority yet")
+                );
+    }
+    public void persistRecommendationIfPresent(Integer userId) {
+
+        computeWeightedMajorityForUser(userId)
+                .ifPresent(category -> {
+                    logger.info(
+                            "Persisting recommendation → user={}, category={}",
+                            userId, category
+                    );
+                    recommendationClient.saveRecommendation(userId, category);
+                });
     }
 }

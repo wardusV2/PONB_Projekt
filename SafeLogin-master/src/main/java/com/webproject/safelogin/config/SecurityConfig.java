@@ -41,7 +41,7 @@ public class SecurityConfig {
     SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
 
         http
-                .securityMatcher("/api/**","/recommendations")
+                .securityMatcher("/api/**","/recommendations/**")
 
                 .csrf(csrf -> csrf.disable())
 
@@ -93,7 +93,7 @@ public class SecurityConfig {
                                 "/ws/info",
                                 "/ws/websocket",
                                 "/api/history/**",
-                                "/recommendations"
+                                "/recommendations/**"
                         )
                 )
 
@@ -129,7 +129,7 @@ public class SecurityConfig {
                                 "/ws/htmlfile",
                                 "/sockjs-node/**",
                                 "/api/history/**",
-                                "/recommendations"
+                                "/recommendations/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()
