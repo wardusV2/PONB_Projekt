@@ -59,7 +59,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🚀 CONNECT TO MAIN SERVICE
+        CONNECT TO MAIN SERVICE
        ========================================================= */
     @PostConstruct
     public void connect() {
@@ -94,7 +94,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🔁 MAIN LOOP
+        MAIN LOOP
        ========================================================= */
     private void startSendingLoop() {
 
@@ -143,7 +143,7 @@ public class SatelliteClient {
 
                     session.send("/app/from-service", message);
 
-                    Thread.sleep(300); // 🔥 throttling
+                    Thread.sleep(300);
                 }
 
             } catch (Exception e) {
@@ -154,7 +154,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       👤 FETCH USERS
+        FETCH USERS
        ========================================================= */
     private List<UserDTO> fetchUsers() {
 
@@ -185,7 +185,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🎬 FETCH WATCH HISTORY
+        FETCH WATCH HISTORY
        ========================================================= */
     private List<WatchHistoryDTO> fetchWatchHistory(int userId) {
 
@@ -222,7 +222,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       📊 CALCULATE CATEGORY
+        CALCULATE CATEGORY
        ========================================================= */
     private String calculateMostWatchedCategory(
             List<WatchHistoryDTO> history

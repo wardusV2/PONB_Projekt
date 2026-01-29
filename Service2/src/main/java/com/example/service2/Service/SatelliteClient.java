@@ -61,7 +61,7 @@ public class SatelliteClient {
     private final ObjectMapper mapper = new ObjectMapper();
 
     /* =========================================================
-       🚀 CONNECT
+        CONNECT
        ========================================================= */
 
     @PostConstruct
@@ -97,7 +97,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🔁 LOOP
+        LOOP
        ========================================================= */
 
     private void startLoop() {
@@ -158,7 +158,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       👤 USERS
+       USERS
        ========================================================= */
 
     private List<UserDTO> fetchUsers() {
@@ -187,7 +187,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🔔 SUBSCRIPTIONS
+        SUBSCRIPTIONS
        ========================================================= */
 
     private List<SubscribedUserDTO> fetchSubscriptions(int userId) {
@@ -219,7 +219,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🎬 VIDEOS OF SUBSCRIBED USERS
+        VIDEOS OF SUBSCRIBED USERS
        ========================================================= */
 
     private List<VideoDTO> fetchVideosOfSubscribedUsers(
@@ -259,7 +259,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       📊 CATEGORY
+        CATEGORY
        ========================================================= */
 
     private String calculateCategory(List<VideoDTO> videos) {

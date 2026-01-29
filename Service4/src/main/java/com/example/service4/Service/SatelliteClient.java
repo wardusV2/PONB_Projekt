@@ -68,7 +68,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🚀 CONNECT
+        CONNECT
        ========================================================= */
 
     @PostConstruct
@@ -109,7 +109,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🔁 MAIN LOOP
+        MAIN LOOP
        ========================================================= */
 
     private void startSendingLoop() {
@@ -176,7 +176,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       👤 FETCH USERS
+        FETCH USERS
        ========================================================= */
 
     private List<UserDTO> fetchUsers() {
@@ -214,7 +214,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🎬 FETCH HISTORY
+        FETCH HISTORY
        ========================================================= */
 
     private List<WatchHistoryDTO> fetchWatchHistory(int userId) {
@@ -259,7 +259,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       📊 CALCULATE RAREST CATEGORY
+        CALCULATE RAREST CATEGORY
        ========================================================= */
 
     private String calculateRarestCategory(

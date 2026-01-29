@@ -91,7 +91,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       🚀 CONNECT
+       CONNECT
        ========================================================= */
 
     @PostConstruct
@@ -134,7 +134,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       🔁 LOOP
+       LOOP
        ========================================================= */
 
     private void startLoop() {
@@ -158,7 +158,7 @@ public class SatelliteClient {
                 if (random.nextDouble() < crashProbability) {
 
                     logger.error(
-                            "💥 FAULT INJECTION: SERVICE7 CRASH"
+                            " FAULT INJECTION: SERVICE7 CRASH"
                     );
 
                     System.exit(1);
@@ -283,7 +283,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       🔔 SUBSCRIPTIONS
+        SUBSCRIPTIONS
        ========================================================= */
 
     private List<SubscribedUserDTO> fetchSubscriptions(
@@ -332,7 +332,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       🎬 VIDEOS
+        VIDEOS
        ========================================================= */
 
     private List<VideoDTO> fetchVideosOfSubscribedUsers(
@@ -388,7 +388,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       ❤️ LIKES
+        LIKES
        ========================================================= */
 
     private List<LikedVideoDTO> fetchLikedVideos(
@@ -437,7 +437,7 @@ public class SatelliteClient {
 
 
     /* =========================================================
-       📊 CATEGORY LOGIC
+        CATEGORY LOGIC
        ========================================================= */
 
     private String calculateCategoryFromVideos(

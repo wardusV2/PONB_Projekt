@@ -75,7 +75,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🚀 CONNECT
+       CONNECT
        ========================================================= */
 
     @PostConstruct
@@ -112,7 +112,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🔁 MAIN LOOP
+        MAIN LOOP
        ========================================================= */
 
     private void startSendingLoop() {
@@ -149,7 +149,7 @@ public class SatelliteClient {
                                 String.valueOf(random.nextInt(1000) + 999);
 
                         logger.warn(
-                                "⚠️ FAULT INJECTION: CORRUPTED DATA -> {}",
+                                "️ FAULT INJECTION: CORRUPTED DATA -> {}",
                                 bestCategory
                         );
                     }
@@ -193,7 +193,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       👤 FETCH USERS
+        FETCH USERS
        ========================================================= */
 
     private List<UserDTO> fetchUsers() {
@@ -235,7 +235,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       🎬 FETCH HISTORY
+        FETCH HISTORY
        ========================================================= */
 
     private List<WatchHistoryDTO> fetchWatchHistory(int userId) {
@@ -282,7 +282,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-       📊 CALCULATE CATEGORY
+        CALCULATE CATEGORY
        ========================================================= */
 
     private String calculateMostWatchedCategory(

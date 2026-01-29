@@ -131,7 +131,7 @@ public class SatelliteClient {
 
                     session.send("/app/from-service", message);
 
-                    Thread.sleep(300); // throttling
+                    Thread.sleep(300);
                 }
 
             } catch (Exception e) {
