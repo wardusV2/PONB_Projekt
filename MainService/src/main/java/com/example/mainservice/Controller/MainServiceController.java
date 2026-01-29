@@ -8,12 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -24,11 +21,17 @@ public class MainServiceController {
     private static final Logger logger =
             LoggerFactory.getLogger(MainServiceController.class);
 
-    private static final DateTimeFormatter formatter =
-            DateTimeFormatter.ofPattern("HH:mm:ss");
-
-    // próg niepewności (15%)
     private static final double EPSILON = 0.15;
+
+    private static final Set<String> EXPECTED_SERVICES = Set.of(
+            "Service1",
+            "Service2",
+            "Service3",
+            "Service4",
+            "Service5",
+            "Service6",
+            "Service7"
+    );
 
     private final RecommendationClient recommendationClient;
 
@@ -39,52 +42,91 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  STORAGE  =================================
+       ====================== STORAGE =============================
        ============================================================ */
 
-    // userId -> (serviceName -> last message)
+    // userId -> (serviceName -> message)
     private final ConcurrentHashMap<Integer,
             ConcurrentHashMap<String, ServiceMessage>>
             lastMessagesPerUser = new ConcurrentHashMap<>();
 
+    // userId -> set(serviceName)
+    private final ConcurrentHashMap<Integer, Set<String>>
+            receivedServicesPerUser = new ConcurrentHashMap<>();
+
     /* ============================================================
-       ===============  WEBSOCKET ENDPOINT  =======================
+       ================== WEBSOCKET ENDPOINT ======================
        ============================================================ */
 
     @MessageMapping("/from-service")
     @SendTo("/topic/main-broadcast")
     public MainResponse receiveMessage(ServiceMessage message) {
 
-        String timestamp = LocalDateTime.now().format(formatter);
-
-        logger.info("══════════════════════════════════════");
-        logger.info(" RECEIVED MESSAGE at {}", timestamp);
-        logger.info(" Service: {}", message.getServiceName());
-        logger.info(" Content: {}", message.getContent());
-        logger.info(" Weight: {}", message.getWeight());
-        logger.info("══════════════════════════════════════");
-
         extractPayload(message).ifPresent(payload -> {
 
+            Integer userId = payload.userId();
+            String serviceName = message.getServiceName();
+
             lastMessagesPerUser
-                    .computeIfAbsent(
-                            payload.userId(),
-                            id -> new ConcurrentHashMap<>()
-                    )
-                    .put(message.getServiceName(), message);
+                    .computeIfAbsent(userId, id -> new ConcurrentHashMap<>())
+                    .put(serviceName, message);
+
+            receivedServicesPerUser
+                    .computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet())
+                    .add(serviceName);
 
             logger.info(
-                    "Stored message → user={}, service={}",
-                    payload.userId(),
-                    message.getServiceName()
+                    "User {} → received from {} ({}/{})",
+                    userId,
+                    serviceName,
+                    receivedServicesPerUser.get(userId).size(),
+                    EXPECTED_SERVICES.size()
             );
+
+            if (receivedServicesPerUser.get(userId)
+                    .containsAll(EXPECTED_SERVICES)) {
+
+                handleSynchronizedUser(userId);
+            }
         });
 
         return new MainResponse("ACK from MainService");
     }
 
     /* ============================================================
-       ===============  PAYLOAD EXTRACTION  =======================
+       ================= SYNCHRONIZED USER ========================
+       ============================================================ */
+
+    private void handleSynchronizedUser(Integer userId) {
+
+        String finalCategory =
+                computeApproximateVoteForUser(userId)
+                        .orElse("OTHER");
+
+        if ("OTHER".equals(finalCategory)) {
+            logger.warn(
+                    "NO CONFIDENT VERDICT → user={}, saving OTHER",
+                    userId
+            );
+        } else {
+            logger.info(
+                    "FINAL VERDICT → user={}, category={}",
+                    userId,
+                    finalCategory
+            );
+        }
+
+        recommendationClient
+                .saveRecommendation(userId, finalCategory);
+
+        // reset po zakończeniu rundy
+        lastMessagesPerUser.remove(userId);
+        receivedServicesPerUser.remove(userId);
+    }
+
+
+    /* ============================================================
+       ================= PAYLOAD EXTRACTION =======================
        ============================================================ */
 
     @SuppressWarnings("unchecked")
@@ -113,7 +155,7 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  APPROXIMATE VOTING  =======================
+       ================= APPROXIMATE VOTING =======================
        ============================================================ */
 
     public Optional<String> computeApproximateVoteForUser(
@@ -143,7 +185,6 @@ public class MainServiceController {
             return Optional.empty();
         }
 
-        // tylko jedna kategoria → brak niepewności
         if (weightSums.size() == 1) {
             return Optional.of(
                     weightSums.keySet().iterator().next()
@@ -171,7 +212,6 @@ public class MainServiceController {
         double relativeDiff = (top - second) / totalWeight;
 
         if (relativeDiff < EPSILON) {
-            // zbyt mała przewaga → brak decyzji
             return Optional.empty();
         }
 
@@ -179,7 +219,7 @@ public class MainServiceController {
     }
 
     /* ============================================================
-       ===============  REST DEBUG ENDPOINT  ======================
+       ================= DEBUG REST ENDPOINT ======================
        ============================================================ */
 
     @GetMapping("/vote/result")
@@ -187,53 +227,13 @@ public class MainServiceController {
 
         Map<String, Object> result = new HashMap<>();
 
-        result.put(
-                "users",
-                lastMessagesPerUser.keySet()
-        );
+        result.put("users", lastMessagesPerUser.keySet());
 
         result.put(
-                "votes",
-                lastMessagesPerUser.entrySet()
-                        .stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                e -> computeApproximateVoteForUser(
-                                        e.getKey()
-                                ).orElse("NO_CONFIDENT_VOTE")
-                        ))
+                "receivedServices",
+                receivedServicesPerUser
         );
 
         return result;
-    }
-
-    /* ============================================================
-       ===============  SCHEDULER  ================================
-       ============================================================ */
-
-    @Scheduled(fixedRate = 15000)
-    public void periodicVoteCheck() {
-
-        lastMessagesPerUser.keySet().forEach(userId ->
-
-                computeApproximateVoteForUser(userId)
-                        .ifPresentOrElse(
-                                category -> {
-                                    logger.info(
-                                            "Approximate vote → user={}, category={}",
-                                            userId, category
-                                    );
-                                    recommendationClient
-                                            .saveRecommendation(
-                                                    userId,
-                                                    category
-                                            );
-                                },
-                                () -> logger.info(
-                                        "No confident vote yet for user {}",
-                                        userId
-                                )
-                        )
-        );
     }
 }
