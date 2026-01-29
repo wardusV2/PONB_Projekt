@@ -1,6 +1,9 @@
 package com.example.service5.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
+import com.example.service5.DTO.MostWatchedCategoryMessage;
+import com.example.service5.DTO.UserDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,134 +16,173 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.format.DateTimeFormatter;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class SatelliteClient {
-    public SatelliteClient() {
-    }
-    public SatelliteClient(String serviceName, double weight, StompSession session) {
-        this.serviceName = serviceName;
-        this.weight = weight;
-        this.session = session;
-    }
 
-    private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final Logger logger =
+            LoggerFactory.getLogger(SatelliteClient.class);
 
-    @Value("${satellite.name:Service1}")
+    private static final String SERVICE_API_KEY =
+            "SUPER_SECRET_SERVICE_KEY_123";
+
+    private static final String USERS_URL =
+            "http://localhost:8080/api/users/all";
+
+    @Value("${satellite.name:Service5}")
     private String serviceName;
 
-    @Value("${satellite.weight:2.0}")
+    @Value("${satellite.weight:1.0}")
     private double weight;
 
     private StompSession session;
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final Random random = new Random();
 
-    private static final String JS_DB_URL =
-            "http://localhost:3001/history/1/favorite-category";
+    private static final List<String> RANDOM_CATEGORIES = List.of(
+            "ACTION",
+            "DRAMA",
+            "COMEDY",
+            "HORROR",
+            "SCI_FI",
+            "ROMANCE",
+            "DOCUMENTARY"
+    );
 
+    /* =========================================================
+        CONNECT TO MAIN SERVICE
+       ========================================================= */
     @PostConstruct
     public void connect() {
-        logger.info("{} starting connection to MainService...", serviceName);
+
+        logger.info("{} connecting to MainService...", serviceName);
 
         WebSocketStompClient client = new WebSocketStompClient(
-                new SockJsClient(java.util.List.of(
+                new SockJsClient(List.of(
                         new WebSocketTransport(new StandardWebSocketClient())
                 ))
         );
+
         client.setMessageConverter(new MappingJackson2MessageConverter());
 
-        CompletableFuture<StompSession> futureSession = client.connectAsync(
+        client.connectAsync(
                 "ws://localhost:8081/main-ws",
                 new StompSessionHandlerAdapter() {
                     @Override
-                    public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-                        logger.info("{} CONNECTED to MainService", serviceName);
+                    public void afterConnected(
+                            StompSession session,
+                            StompHeaders headers
+                    ) {
+                        logger.info("{} CONNECTED", serviceName);
+                        SatelliteClient.this.session = session;
+                        startSendingLoop();
                     }
                 }
         );
-
-        futureSession.thenAccept(stompSession -> {
-            this.session = stompSession;
-
-            stompSession.subscribe("/topic/main-broadcast", new StompFrameHandler() {
-                @Override
-                public Type getPayloadType(StompHeaders headers) {
-                    return Object.class;
-                }
-
-                @Override
-                public void handleFrame(StompHeaders headers, Object payload) {
-                    logger.info("{} RECEIVED: {}", serviceName, payload);
-                }
-            });
-
-            ScheduledExecutorService scheduler =
-                    Executors.newSingleThreadScheduledExecutor();
-
-            scheduler.scheduleAtFixedRate(() -> {
-                if (stompSession.isConnected()) {
-                    try {
-                        int msgNum = messageCounter.incrementAndGet();
-                        String bestCategory = fetchBestCategoryFromJsDb();
-
-                        String content =
-                                "MOST_WATCHED_CATEGORY=" + bestCategory;
-
-                        ServiceMessage message =
-                                new ServiceMessage(serviceName, content, weight);
-
-                        logger.info("Sending message #{}: {}", msgNum, content);
-
-                        stompSession.send("/app/from-service", message);
-
-                    } catch (Exception e) {
-                        logger.error("Error while sending message: {}", e.getMessage());
-                    }
-                }
-            }, 15, 15, TimeUnit.SECONDS);
-
-        });
     }
 
-    /**
-     * Pobiera kategorię z JS bazy (REST API)
-     */
-    private String fetchBestCategoryFromJsDb() {
+    /* =========================================================
+        MAIN LOOP
+       ========================================================= */
+    private void startSendingLoop() {
+
+        ScheduledExecutorService scheduler =
+                Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+
+            if (session == null || !session.isConnected()) {
+                logger.warn("WebSocket not connected");
+                return;
+            }
+
+            try {
+                List<UserDTO> users = fetchUsers();
+
+                for (UserDTO user : users) {
+
+                    String randomCategory = randomCategory();
+
+                    MostWatchedCategoryMessage payload =
+                            new MostWatchedCategoryMessage(
+                                    user.id(),
+                                    randomCategory
+                            );
+
+                    ServiceMessage message =
+                            new ServiceMessage(
+                                    serviceName,
+                                    payload,
+                                    weight
+                            );
+
+                    int msgNum = messageCounter.incrementAndGet();
+
+                    logger.info(
+                            "Sending #{} → user {} → RANDOM({})",
+                            msgNum,
+                            user.id(),
+                            randomCategory
+                    );
+
+                    session.send("/app/from-service", message);
+
+                    Thread.sleep(300); // throttling jak w service1
+                }
+
+            } catch (Exception e) {
+                logger.error("Error in main loop", e);
+            }
+
+        }, 10, 30, TimeUnit.SECONDS);
+    }
+
+    /* =========================================================
+        FETCH USERS FROM REST
+       ========================================================= */
+    private List<UserDTO> fetchUsers() {
+
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(JS_DB_URL))
+                    .uri(URI.create(USERS_URL))
+                    .header("X-SERVICE-KEY", SERVICE_API_KEY)
                     .GET()
                     .build();
 
             HttpResponse<String> response =
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
 
-            String json = response.body();
-
-            // Proste parsowanie JSON bez bibliotek:
-            // {"userId":1,"mostWatchedCategory":10}
-            String key = "\"mostWatchedCategory\":";
-            int index = json.indexOf(key) + key.length();
-
-            return json.substring(index)
-                    .replaceAll("[^0-9]", "");
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            UserDTO[].class
+                    )
+            );
 
         } catch (Exception e) {
-            logger.error("JS DB unavailable: {}", e.getMessage());
-            return "ERROR";
+            logger.error("Cannot fetch users", e);
+            return List.of();
         }
+    }
+
+    /* =========================================================
+        RANDOM CATEGORY
+       ========================================================= */
+    private String randomCategory() {
+        return RANDOM_CATEGORIES.get(
+                random.nextInt(RANDOM_CATEGORIES.size())
+        );
     }
 }
