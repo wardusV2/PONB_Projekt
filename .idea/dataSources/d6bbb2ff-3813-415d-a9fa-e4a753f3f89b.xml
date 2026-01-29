@@ -929,7 +929,7 @@ SafeLoginDb|schema||appuser||UPDATE|G</Grants>
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <Current>1</Current>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2026-01-28.06:56:16</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2026-01-29.10:00:25</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
     <schema id="289" parent="1" name="information_schema">
@@ -964,371 +964,411 @@ SafeLoginDb|schema||appuser||UPDATE|G</Grants>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="297" parent="288" name="user_seq">
+    <table id="297" parent="288" name="user_liked">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="298" parent="288" name="user_subscriptions">
+    <table id="298" parent="288" name="user_seq">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="299" parent="288" name="video">
+    <table id="299" parent="288" name="user_subscriptions">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="300" parent="288" name="video_seq">
+    <table id="300" parent="288" name="video">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <table id="301" parent="288" name="watch_history">
+    <table id="301" parent="288" name="video_seq">
       <DetailsLevel>3</DetailsLevel>
       <Engine>InnoDB</Engine>
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </table>
-    <column id="302" parent="292" name="id">
+    <table id="302" parent="288" name="watch_history">
+      <DetailsLevel>3</DetailsLevel>
+      <Engine>InnoDB</Engine>
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
+    </table>
+    <column id="303" parent="292" name="id">
       <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="303" parent="292" name="content">
+    <column id="304" parent="292" name="content">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(1000)|0s</StoredType>
     </column>
-    <column id="304" parent="292" name="timestamp">
+    <column id="305" parent="292" name="timestamp">
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>datetime(6)|0s</StoredType>
     </column>
-    <column id="305" parent="292" name="type">
+    <column id="306" parent="292" name="type">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>enum(&apos;PRIVATE&apos;, &apos;PUBLIC&apos;, &apos;SYSTEM&apos;)|0e</StoredType>
     </column>
-    <column id="306" parent="292" name="receiver_id">
+    <column id="307" parent="292" name="receiver_id">
       <Position>5</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="307" parent="292" name="sender_id">
+    <column id="308" parent="292" name="sender_id">
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <foreign-key id="308" parent="292" name="FKeib62f6js5bo76g2i4t0eh6ka">
+    <foreign-key id="309" parent="292" name="FKeib62f6js5bo76g2i4t0eh6ka">
       <ColNames>receiver_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>user</RefTableName>
     </foreign-key>
-    <foreign-key id="309" parent="292" name="FKdrg1riwsto0x2cn9yxdu1sc4p">
+    <foreign-key id="310" parent="292" name="FKdrg1riwsto0x2cn9yxdu1sc4p">
       <ColNames>sender_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>user</RefTableName>
     </foreign-key>
-    <index id="310" parent="292" name="PRIMARY">
+    <index id="311" parent="292" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="311" parent="292" name="FKeib62f6js5bo76g2i4t0eh6ka">
+    <index id="312" parent="292" name="FKeib62f6js5bo76g2i4t0eh6ka">
       <ColNames>receiver_id</ColNames>
       <Type>btree</Type>
     </index>
-    <index id="312" parent="292" name="FKdrg1riwsto0x2cn9yxdu1sc4p">
+    <index id="313" parent="292" name="FKdrg1riwsto0x2cn9yxdu1sc4p">
       <ColNames>sender_id</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="313" parent="292" name="PRIMARY">
+    <key id="314" parent="292" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <column id="314" parent="293" name="id">
+    <column id="315" parent="293" name="id">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="315" parent="293" name="content">
+    <column id="316" parent="293" name="content">
       <Position>2</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="316" parent="293" name="created_at">
+    <column id="317" parent="293" name="created_at">
       <Position>3</Position>
       <StoredType>datetime(6)|0s</StoredType>
     </column>
-    <column id="317" parent="293" name="user_id">
+    <column id="318" parent="293" name="user_id">
       <Position>4</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="318" parent="293" name="video_id">
+    <column id="319" parent="293" name="video_id">
       <Position>5</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <foreign-key id="319" parent="293" name="FK8kcum44fvpupyw6f5baccx25c">
+    <foreign-key id="320" parent="293" name="FK8kcum44fvpupyw6f5baccx25c">
       <ColNames>user_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>user</RefTableName>
     </foreign-key>
-    <foreign-key id="320" parent="293" name="FKbsuh08kv1lyh8v6ivufrollr6">
+    <foreign-key id="321" parent="293" name="FKbsuh08kv1lyh8v6ivufrollr6">
       <ColNames>video_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>video</RefTableName>
     </foreign-key>
-    <index id="321" parent="293" name="PRIMARY">
+    <index id="322" parent="293" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="322" parent="293" name="FK8kcum44fvpupyw6f5baccx25c">
+    <index id="323" parent="293" name="FK8kcum44fvpupyw6f5baccx25c">
       <ColNames>user_id</ColNames>
       <Type>btree</Type>
     </index>
-    <index id="323" parent="293" name="FKbsuh08kv1lyh8v6ivufrollr6">
+    <index id="324" parent="293" name="FKbsuh08kv1lyh8v6ivufrollr6">
       <ColNames>video_id</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="324" parent="293" name="PRIMARY">
+    <key id="325" parent="293" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <column id="325" parent="294" name="next_val">
+    <column id="326" parent="294" name="next_val">
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="326" parent="295" name="id">
-      <AutoIncrement>1</AutoIncrement>
+    <column id="327" parent="295" name="id">
+      <AutoIncrement>77</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>bigint|0s</StoredType>
     </column>
-    <column id="327" parent="295" name="category">
+    <column id="328" parent="295" name="category">
       <Position>2</Position>
       <StoredType>enum(&apos;EDUCATION&apos;, &apos;GAMING&apos;, &apos;MOVIES&apos;, &apos;MUSIC&apos;, &apos;OTHER&apos;, &apos;SPORT&apos;, &apos;TECHNOLOGY&apos;)|0e</StoredType>
     </column>
-    <column id="328" parent="295" name="created_at">
+    <column id="329" parent="295" name="created_at">
       <Position>3</Position>
       <StoredType>datetime(6)|0s</StoredType>
     </column>
-    <column id="329" parent="295" name="user_id">
+    <column id="330" parent="295" name="user_id">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <foreign-key id="330" parent="295" name="FK8cjedlqgad0a04kgviq1godt0">
+    <foreign-key id="331" parent="295" name="FK8cjedlqgad0a04kgviq1godt0">
       <ColNames>user_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>user</RefTableName>
     </foreign-key>
-    <index id="331" parent="295" name="PRIMARY">
+    <index id="332" parent="295" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="332" parent="295" name="FK8cjedlqgad0a04kgviq1godt0">
+    <index id="333" parent="295" name="FK8cjedlqgad0a04kgviq1godt0">
       <ColNames>user_id</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="333" parent="295" name="PRIMARY">
+    <key id="334" parent="295" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <column id="334" parent="296" name="id">
+    <column id="335" parent="296" name="id">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="335" parent="296" name="account_locked">
+    <column id="336" parent="296" name="account_locked">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>bit(1)|0s</StoredType>
     </column>
-    <column id="336" parent="296" name="email">
+    <column id="337" parent="296" name="email">
       <Position>3</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="337" parent="296" name="failed_attempts">
+    <column id="338" parent="296" name="failed_attempts">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="338" parent="296" name="lock_time">
+    <column id="339" parent="296" name="lock_time">
       <Position>5</Position>
       <StoredType>datetime(6)|0s</StoredType>
     </column>
-    <column id="339" parent="296" name="name">
+    <column id="340" parent="296" name="name">
       <Position>6</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="340" parent="296" name="nick">
+    <column id="341" parent="296" name="nick">
       <Position>7</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="341" parent="296" name="password">
+    <column id="342" parent="296" name="password">
       <Position>8</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="342" parent="296" name="surname">
+    <column id="343" parent="296" name="surname">
       <Position>9</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="343" parent="296" name="totp_secret">
+    <column id="344" parent="296" name="totp_secret">
       <Position>10</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <index id="344" parent="296" name="PRIMARY">
+    <index id="345" parent="296" name="PRIMARY">
       <ColNames>id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="345" parent="296" name="PRIMARY">
+    <key id="346" parent="296" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <column id="346" parent="297" name="next_val">
-      <Position>1</Position>
-      <StoredType>bigint|0s</StoredType>
-    </column>
-    <column id="347" parent="298" name="subscriber_id">
+    <column id="347" parent="297" name="user_id">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <column id="348" parent="298" name="subscribed_to_id">
+    <column id="348" parent="297" name="video_id">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>int|0s</StoredType>
     </column>
-    <foreign-key id="349" parent="298" name="FKl9bhyxre3khiisorjq37vbr3f">
-      <ColNames>subscriber_id</ColNames>
-      <RefColNames>id</RefColNames>
-      <RefTableName>user</RefTableName>
-    </foreign-key>
-    <foreign-key id="350" parent="298" name="FKrq4ew666xpg3h8r5biky54u6u">
-      <ColNames>subscribed_to_id</ColNames>
-      <RefColNames>id</RefColNames>
-      <RefTableName>user</RefTableName>
-    </foreign-key>
-    <index id="351" parent="298" name="PRIMARY">
-      <ColNames>subscriber_id
-subscribed_to_id</ColNames>
-      <Type>btree</Type>
-      <Unique>1</Unique>
-    </index>
-    <index id="352" parent="298" name="FKrq4ew666xpg3h8r5biky54u6u">
-      <ColNames>subscribed_to_id</ColNames>
-      <Type>btree</Type>
-    </index>
-    <key id="353" parent="298" name="PRIMARY">
-      <NameSurrogate>1</NameSurrogate>
-      <Primary>1</Primary>
-      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
-    </key>
-    <column id="354" parent="299" name="id">
-      <NotNull>1</NotNull>
-      <Position>1</Position>
-      <StoredType>int|0s</StoredType>
-    </column>
-    <column id="355" parent="299" name="title">
-      <Position>2</Position>
-      <StoredType>varchar(255)|0s</StoredType>
-    </column>
-    <column id="356" parent="299" name="url">
-      <Position>3</Position>
-      <StoredType>text|0s</StoredType>
-    </column>
-    <column id="357" parent="299" name="owner_id">
-      <Position>4</Position>
-      <StoredType>int|0s</StoredType>
-    </column>
-    <column id="358" parent="299" name="category">
-      <Position>5</Position>
-      <StoredType>enum(&apos;EDUCATION&apos;, &apos;GAMING&apos;, &apos;MOVIES&apos;, &apos;MUSIC&apos;, &apos;OTHER&apos;, &apos;SPORT&apos;, &apos;TECHNOLOGY&apos;)|0e</StoredType>
-    </column>
-    <foreign-key id="359" parent="299" name="FKrynou83hwjb0gqpdjrp55539k">
-      <ColNames>owner_id</ColNames>
-      <RefColNames>id</RefColNames>
-      <RefTableName>user</RefTableName>
-    </foreign-key>
-    <index id="360" parent="299" name="PRIMARY">
-      <ColNames>id</ColNames>
-      <Type>btree</Type>
-      <Unique>1</Unique>
-    </index>
-    <index id="361" parent="299" name="FKrynou83hwjb0gqpdjrp55539k">
-      <ColNames>owner_id</ColNames>
-      <Type>btree</Type>
-    </index>
-    <key id="362" parent="299" name="PRIMARY">
-      <NameSurrogate>1</NameSurrogate>
-      <Primary>1</Primary>
-      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
-    </key>
-    <column id="363" parent="300" name="next_val">
-      <Position>1</Position>
-      <StoredType>bigint|0s</StoredType>
-    </column>
-    <column id="364" parent="301" name="id">
-      <AutoIncrement>1</AutoIncrement>
-      <NotNull>1</NotNull>
-      <Position>1</Position>
-      <StoredType>bigint|0s</StoredType>
-    </column>
-    <column id="365" parent="301" name="last_position_seconds">
-      <Position>2</Position>
-      <StoredType>bigint|0s</StoredType>
-    </column>
-    <column id="366" parent="301" name="watched_at">
-      <Position>3</Position>
-      <StoredType>datetime(6)|0s</StoredType>
-    </column>
-    <column id="367" parent="301" name="user_id">
-      <NotNull>1</NotNull>
-      <Position>4</Position>
-      <StoredType>int|0s</StoredType>
-    </column>
-    <column id="368" parent="301" name="video_id">
-      <NotNull>1</NotNull>
-      <Position>5</Position>
-      <StoredType>int|0s</StoredType>
-    </column>
-    <foreign-key id="369" parent="301" name="FKf8ekqw3udry7ve0s63eo2sca7">
+    <foreign-key id="349" parent="297" name="FKa1oo95bk54q7lxj5lxlq52mrg">
       <ColNames>user_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>user</RefTableName>
     </foreign-key>
-    <foreign-key id="370" parent="301" name="FKhqkhtrunidqpd5flpufr7cjof">
+    <foreign-key id="350" parent="297" name="FKsox5wu8xuqayhpmfus3wpsmpw">
       <ColNames>video_id</ColNames>
       <RefColNames>id</RefColNames>
       <RefTableName>video</RefTableName>
     </foreign-key>
-    <index id="371" parent="301" name="PRIMARY">
-      <ColNames>id</ColNames>
-      <Type>btree</Type>
-      <Unique>1</Unique>
-    </index>
-    <index id="372" parent="301" name="UKe8c2h2mvnib7fxkivq5s323wv">
+    <index id="351" parent="297" name="PRIMARY">
       <ColNames>user_id
 video_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="373" parent="301" name="FKhqkhtrunidqpd5flpufr7cjof">
+    <index id="352" parent="297" name="FKsox5wu8xuqayhpmfus3wpsmpw">
       <ColNames>video_id</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="374" parent="301" name="PRIMARY">
+    <key id="353" parent="297" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="375" parent="301" name="UKe8c2h2mvnib7fxkivq5s323wv">
+    <column id="354" parent="298" name="next_val">
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="355" parent="299" name="subscriber_id">
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <column id="356" parent="299" name="subscribed_to_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <foreign-key id="357" parent="299" name="FKl9bhyxre3khiisorjq37vbr3f">
+      <ColNames>subscriber_id</ColNames>
+      <RefColNames>id</RefColNames>
+      <RefTableName>user</RefTableName>
+    </foreign-key>
+    <foreign-key id="358" parent="299" name="FKrq4ew666xpg3h8r5biky54u6u">
+      <ColNames>subscribed_to_id</ColNames>
+      <RefColNames>id</RefColNames>
+      <RefTableName>user</RefTableName>
+    </foreign-key>
+    <index id="359" parent="299" name="PRIMARY">
+      <ColNames>subscriber_id
+subscribed_to_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="360" parent="299" name="FKrq4ew666xpg3h8r5biky54u6u">
+      <ColNames>subscribed_to_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="361" parent="299" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <column id="362" parent="300" name="id">
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <column id="363" parent="300" name="title">
+      <Position>2</Position>
+      <StoredType>varchar(255)|0s</StoredType>
+    </column>
+    <column id="364" parent="300" name="url">
+      <Position>3</Position>
+      <StoredType>text|0s</StoredType>
+    </column>
+    <column id="365" parent="300" name="owner_id">
+      <Position>4</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <column id="366" parent="300" name="category">
+      <Position>5</Position>
+      <StoredType>enum(&apos;EDUCATION&apos;, &apos;GAMING&apos;, &apos;MOVIES&apos;, &apos;MUSIC&apos;, &apos;OTHER&apos;, &apos;SPORT&apos;, &apos;TECHNOLOGY&apos;)|0e</StoredType>
+    </column>
+    <foreign-key id="367" parent="300" name="FKrynou83hwjb0gqpdjrp55539k">
+      <ColNames>owner_id</ColNames>
+      <RefColNames>id</RefColNames>
+      <RefTableName>user</RefTableName>
+    </foreign-key>
+    <index id="368" parent="300" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="369" parent="300" name="FKrynou83hwjb0gqpdjrp55539k">
+      <ColNames>owner_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="370" parent="300" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <column id="371" parent="301" name="next_val">
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="372" parent="302" name="id">
+      <AutoIncrement>40</AutoIncrement>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="373" parent="302" name="last_position_seconds">
+      <Position>2</Position>
+      <StoredType>bigint|0s</StoredType>
+    </column>
+    <column id="374" parent="302" name="watched_at">
+      <Position>3</Position>
+      <StoredType>datetime(6)|0s</StoredType>
+    </column>
+    <column id="375" parent="302" name="user_id">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <column id="376" parent="302" name="video_id">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>int|0s</StoredType>
+    </column>
+    <foreign-key id="377" parent="302" name="FKf8ekqw3udry7ve0s63eo2sca7">
+      <ColNames>user_id</ColNames>
+      <RefColNames>id</RefColNames>
+      <RefTableName>user</RefTableName>
+    </foreign-key>
+    <foreign-key id="378" parent="302" name="FKhqkhtrunidqpd5flpufr7cjof">
+      <ColNames>video_id</ColNames>
+      <RefColNames>id</RefColNames>
+      <RefTableName>video</RefTableName>
+    </foreign-key>
+    <index id="379" parent="302" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="380" parent="302" name="UKe8c2h2mvnib7fxkivq5s323wv">
+      <ColNames>user_id
+video_id</ColNames>
+      <Type>btree</Type>
+      <Unique>1</Unique>
+    </index>
+    <index id="381" parent="302" name="FKhqkhtrunidqpd5flpufr7cjof">
+      <ColNames>video_id</ColNames>
+      <Type>btree</Type>
+    </index>
+    <key id="382" parent="302" name="PRIMARY">
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
+    </key>
+    <key id="383" parent="302" name="UKe8c2h2mvnib7fxkivq5s323wv">
       <UnderlyingIndexName>UKe8c2h2mvnib7fxkivq5s323wv</UnderlyingIndexName>
     </key>
   </database-model>

@@ -17,13 +17,21 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/unknown/lombok-unknown.jar" />
         </processorPath>
         <module name="MainService" />
-        <module name="Service4" />
         <module name="Service3" />
         <module name="Service2" />
         <module name="Service1" />
         <module name="Service7" />
         <module name="Service6" />
         <module name="Service5" />
+      </profile>
+      <profile name="Annotation profile for Service3" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+        </processorPath>
+        <module name="Service4" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>

@@ -52,6 +52,8 @@ const VideoPlayer = () => {
   const [stompClient, setStompClient] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Rozłączono');
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
   
   // Referencje do kontroli zapisywania
   const hasSavedHistory = useRef(false);
@@ -470,6 +472,68 @@ const VideoPlayer = () => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+  const checkIfLiked = async () => {
+    if (!currentUser?.id || !video?.id) return;
+
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/users/${currentUser.id}/liked`,
+        {
+          withCredentials: true,
+          headers: {
+            'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
+          }
+        }
+      );
+
+      const liked = res.data.some(v => v.id === video.id);
+      setIsLiked(liked);
+    } catch (err) {
+      console.error('❌ Błąd sprawdzania like:', err);
+    }
+  };
+  checkIfLiked();
+}, [currentUser, video]);
+  const handleLikeToggle = async () => {
+  if (!currentUser) {
+    message.warning('Musisz być zalogowany, aby polubić wideo');
+    return;
+  }
+
+  setLikeLoading(true);
+
+  try {
+    const csrfRes = await axios.get(
+      'http://localhost:8080/csrf-token',
+      { withCredentials: true }
+    );
+
+    const url = isLiked
+      ? `http://localhost:8080/users/${currentUser.id}/unlike/${video.id}`
+      : `http://localhost:8080/users/${currentUser.id}/like/${video.id}`;
+
+    await axios.post(
+      url,
+      {},
+      {
+        withCredentials: true,
+        headers: {
+          'X-XSRF-TOKEN': csrfRes.data.csrfToken,
+          'X-SERVICE-KEY': 'SUPER_SECRET_SERVICE_KEY_123'
+        }
+      }
+    );
+
+    setIsLiked(prev => !prev);
+    message.success(isLiked ? 'Usunięto polubienie' : 'Polubiono wideo ❤️');
+  } catch (err) {
+    console.error('❌ Błąd like/unlike:', err);
+    message.error('Nie udało się zapisać polubienia');
+  } finally {
+    setLikeLoading(false);
+  }
+};
 
   // Obsługa subskrypcji - bez zmian
   const handleSubscribe = async () => {
@@ -636,10 +700,22 @@ const VideoPlayer = () => {
                   <Space><EyeOutlined /><Text>1,234 wyświetleń</Text></Space>
                   <Space><CommentOutlined /><Text>{comments.length} komentarzy</Text></Space>
                 </Space>
+
                 <Space className="video-actions">
-                  <Tooltip title="Polub">
-                    <Button icon={<HeartOutlined />} size="large">Polub</Button>
-                  </Tooltip>
+                 <Tooltip title="Polub">
+                <Button
+                    icon={<HeartOutlined />}
+                    size="large"
+                    loading={likeLoading}
+                    onClick={handleLikeToggle}
+                    disabled={!currentUser}
+                    danger={isLiked}
+                    type={isLiked ? "primary" : "default"}
+                  >
+                    {isLiked ? "Polubione" : "Polub"}
+                  </Button>
+                </Tooltip>
+
                   <Tooltip title={isSubscribed ? "Anuluj subskrypcję" : "Subskrybuj kanał"}>
                     <Button
                       type={isSubscribed ? "default" : "primary"}

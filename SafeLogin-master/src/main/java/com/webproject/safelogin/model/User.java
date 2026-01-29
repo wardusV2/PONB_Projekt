@@ -36,6 +36,13 @@ public class User {
     @ManyToMany(mappedBy = "subscriptions")
     private Set<User> subscribers = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "user_liked",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "video_id")
+    )
+    private Set<Video> likedVideos = new HashSet<>();
 
     public User() {
     }
@@ -169,4 +176,27 @@ public class User {
     @OneToMany(mappedBy = "receiver")
     private List<ChatMessage> receivedMessages;
 
+    public Set<Video> getLikedVideos() {
+        return likedVideos;
+    }
+
+    public void setLikedVideos(Set<Video> likedVideos) {
+        this.likedVideos = likedVideos;
+    }
+
+    public List<ChatMessage> getSentMessages() {
+        return sentMessages;
+    }
+
+    public void setSentMessages(List<ChatMessage> sentMessages) {
+        this.sentMessages = sentMessages;
+    }
+
+    public List<ChatMessage> getReceivedMessages() {
+        return receivedMessages;
+    }
+
+    public void setReceivedMessages(List<ChatMessage> receivedMessages) {
+        this.receivedMessages = receivedMessages;
+    }
 }
