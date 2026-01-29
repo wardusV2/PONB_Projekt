@@ -123,7 +123,7 @@ public class SatelliteClient {
                     int msgNum = messageCounter.incrementAndGet();
 
                     logger.info(
-                            "Sending #{} → user {} → DB({})",
+                            "Sending #{} → user {} → ({})",
                             msgNum,
                             user.id(),
                             bestCategory
