@@ -1,7 +1,10 @@
 package com.webproject.safelogin.model;
 
 import jakarta.persistence.*;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 public class Video {
@@ -20,6 +23,9 @@ public class Video {
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
+
+    @ManyToMany(mappedBy = "likedVideos")
+    private Set<User> likedByUsers = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     private Category category;
