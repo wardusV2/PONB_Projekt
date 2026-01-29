@@ -61,6 +61,7 @@ const LandingPage = () => {
             withCredentials: true,
             headers: {
               'X-XSRF-TOKEN': csrfToken,
+              "X-SERVICE-KEY": "SUPER_SECRET_SERVICE_KEY_123",
             },
           });
 

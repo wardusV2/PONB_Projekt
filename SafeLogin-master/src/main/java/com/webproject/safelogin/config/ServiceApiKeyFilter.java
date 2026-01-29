@@ -38,7 +38,7 @@ public class ServiceApiKeyFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 🔐 KLUCZOWE: oznacz request jako authenticated
+
             var auth = new UsernamePasswordAuthenticationToken(
                     "SERVICE_1",
                     null,

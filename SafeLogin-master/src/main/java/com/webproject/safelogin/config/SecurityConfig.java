@@ -34,7 +34,7 @@ public class SecurityConfig {
     private static final String SERVICE_API_KEY = "SUPER_SECRET_SERVICE_KEY_123";
 
     /* =========================================================
-       1️⃣ API – /api/** (STATELESS + X-SERVICE-KEY)
+        API – /api/** (STATELESS + X-SERVICE-KEY)
        ========================================================= */
     @Bean
     @Order(1)
