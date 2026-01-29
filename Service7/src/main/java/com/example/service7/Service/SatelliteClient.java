@@ -1,6 +1,8 @@
 package com.example.service7.Service;
 
 import com.example.mainservice.DTO.ServiceMessage;
+import com.example.service7.DTO.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,32 +15,56 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * SERVICE7
  *
- * Algorytm: Połączenie najczęściej subskrybowanej i polubionej kategorii
- * Endpointy: /history/1/favorite-subscribed-category + /history/1/favorite-liked-category
- * Port: 8088
- * Waga: 0.9
+ * Algorytm:
+ * Połączenie kategorii z:
+ *  - subskrypcji
+ *  - polubień
  *
- * Wstrzykiwany błąd:
- * CRASH (20%) - Losowe wyłączanie się przy 20% prawdopodobieństwie (System.exit)
+ * Fault:
+ *  CRASH 20%
  */
 
 @Component
 public class SatelliteClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(SatelliteClient.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(SatelliteClient.class);
+
     private static final Random random = new Random();
+
+
+    /* ================= API ================= */
+
+    private static final String USERS_URL =
+            "http://localhost:8080/api/users/all";
+
+    private static final String SUBSCRIPTIONS_URL =
+            "http://localhost:8080/getSubscriptions/";
+
+    private static final String USER_VIDEOS_URL =
+            "http://localhost:8080/videosByUser/";
+
+    private static final String USER_LIKED_URL =
+            "http://localhost:8080/users/";
+
+
+    private static final String SERVICE_API_KEY =
+            "SUPER_SECRET_SERVICE_KEY_123";
+
+
+    /* ================= CONFIG ================= */
 
     @Value("${satellite.name:Service7}")
     private String serviceName;
@@ -46,120 +72,428 @@ public class SatelliteClient {
     @Value("${satellite.weight:0.9}")
     private double weight;
 
-    // Prawdopodobieństwo błędu
     @Value("${fault.injection.crash:0.2}")
     private double crashProbability;
 
-    private StompSession session;
-    private final AtomicInteger messageCounter = new AtomicInteger(0);
-    private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    private static final String JS_DB_URL_SUBSCRIBED =
-            "http://localhost:3001/history/1/favorite-subscribed-category";
-    private static final String JS_DB_URL_LIKED =
-            "http://localhost:3001/history/1/favorite-liked-category";
+    /* ================= STATE ================= */
+
+    private StompSession session;
+
+    private final AtomicInteger counter =
+            new AtomicInteger();
+
+    private final HttpClient httpClient =
+            HttpClient.newHttpClient();
+
+    private final ObjectMapper mapper =
+            new ObjectMapper();
+
+
+    /* =========================================================
+       🚀 CONNECT
+       ========================================================= */
 
     @PostConstruct
     public void connect() {
-        logger.info("{} starting connection to MainService...", serviceName);
 
-        WebSocketStompClient client = new WebSocketStompClient(
-                new SockJsClient(java.util.List.of(
-                        new WebSocketTransport(new StandardWebSocketClient())
-                ))
+        logger.info("{} connecting...", serviceName);
+
+        WebSocketStompClient client =
+                new WebSocketStompClient(
+                        new SockJsClient(List.of(
+                                new WebSocketTransport(
+                                        new StandardWebSocketClient()
+                                )
+                        ))
+                );
+
+        client.setMessageConverter(
+                new MappingJackson2MessageConverter()
         );
-        client.setMessageConverter(new MappingJackson2MessageConverter());
 
-        CompletableFuture<StompSession> futureSession = client.connectAsync(
+        client.connectAsync(
                 "ws://localhost:8081/main-ws",
                 new StompSessionHandlerAdapter() {
+
                     @Override
-                    public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
-                        logger.info("{} CONNECTED to MainService", serviceName);
+                    public void afterConnected(
+                            StompSession session,
+                            StompHeaders headers
+                    ) {
+
+                        logger.info("{} CONNECTED", serviceName);
+
+                        SatelliteClient.this.session = session;
+
+                        startLoop();
                     }
                 }
         );
-
-        futureSession.thenAccept(stompSession -> {
-            this.session = stompSession;
-
-            stompSession.subscribe("/topic/main-broadcast", new StompFrameHandler() {
-                @Override
-                public Type getPayloadType(StompHeaders headers) {
-                    return Object.class;
-                }
-
-                @Override
-                public void handleFrame(StompHeaders headers, Object payload) {
-                    logger.info("{} RECEIVED: {}", serviceName, payload);
-                }
-            });
-
-            ScheduledExecutorService scheduler =
-                    Executors.newSingleThreadScheduledExecutor();
-
-            scheduler.scheduleAtFixedRate(() -> {
-                if (stompSession.isConnected()) {
-                    try {
-                        int msgNum = messageCounter.incrementAndGet();
-
-                        // BŁĄD: Symulacja crash - zatrzymanie aplikacji
-                        if (random.nextDouble() < crashProbability) {
-                            logger.error("💥 FAULT INJECTION: SERVICE CRASH - Shutting down application!");
-                            System.exit(1); // zatrzymanie aplikacji
-                        }
-
-                        String combinedCategory = fetchCombinedCategoryFromJsDb();
-
-                        String content = "COMBINED_SUBSCRIBED_LIKED_CATEGORY=" + combinedCategory;
-
-                        ServiceMessage message =
-                                new ServiceMessage(serviceName, content, weight);
-
-                        logger.info("Sending message #{}: {}", msgNum, content);
-
-                        stompSession.send("/app/from-service", message);
-
-                    } catch (Exception e) {
-                        logger.error("Error while sending message: {}", e.getMessage());
-                    }
-                }
-            }, 15, 15, TimeUnit.SECONDS);
-
-        });
     }
 
-    private String fetchCombinedCategoryFromJsDb() {
-        try {
-            String subscribedCat = fetchCategoryFromUrl(JS_DB_URL_SUBSCRIBED, "mostSubscribedCategory");
-            String likedCat = fetchCategoryFromUrl(JS_DB_URL_LIKED, "mostLikedCategory");
 
-            if (subscribedCat.equals(likedCat)) {
-                return subscribedCat;
+    /* =========================================================
+       🔁 LOOP
+       ========================================================= */
+
+    private void startLoop() {
+
+        ScheduledExecutorService scheduler =
+                Executors.newSingleThreadScheduledExecutor();
+
+        scheduler.scheduleAtFixedRate(() -> {
+
+            if (session == null || !session.isConnected()) {
+                logger.warn("WebSocket not connected");
+                return;
             }
 
-            return subscribedCat + "," + likedCat;
+            try {
+
+                /* ===============================
+                   FAULT INJECTION: CRASH
+                   =============================== */
+
+                if (random.nextDouble() < crashProbability) {
+
+                    logger.error(
+                            "💥 FAULT INJECTION: SERVICE7 CRASH"
+                    );
+
+                    System.exit(1);
+                }
+
+
+                List<UserDTO> users = fetchUsers();
+
+                for (UserDTO user : users) {
+
+                    /* ---------- SUBSCRIPTIONS ---------- */
+
+                    List<SubscribedUserDTO> subs =
+                            fetchSubscriptions(user.id());
+
+                    List<VideoDTO> videos =
+                            fetchVideosOfSubscribedUsers(subs);
+
+                    String subCategory =
+                            calculateCategoryFromVideos(videos);
+
+
+                    /* ---------- LIKES ---------- */
+
+                    List<LikedVideoDTO> likes =
+                            fetchLikedVideos(user.id());
+
+                    String likedCategory =
+                            calculateCategoryFromLikes(likes);
+
+
+                    /* ---------- COMBINE ---------- */
+
+                    String combinedCategory;
+
+                    if (subCategory.equals(likedCategory)) {
+                        combinedCategory = subCategory;
+                    } else {
+                        combinedCategory =
+                                subCategory + "," + likedCategory;
+                    }
+
+
+                    ServiceMessage message =
+                            new ServiceMessage(
+                                    serviceName,
+                                    new SubscribedCategoryMessage(
+                                            user.id(),
+                                            combinedCategory
+                                    ),
+                                    weight
+                            );
+
+                    int msgNum =
+                            counter.incrementAndGet();
+
+                    logger.info(
+                            "Service7 #{} → user {} → {}",
+                            msgNum,
+                            user.id(),
+                            combinedCategory
+                    );
+
+                    session.send(
+                            "/app/from-service",
+                            message
+                    );
+
+                    Thread.sleep(250);
+                }
+
+            } catch (Exception e) {
+
+                logger.error(
+                        "Service7 loop error",
+                        e
+                );
+            }
+
+        }, 15, 40, TimeUnit.SECONDS);
+    }
+
+
+    /* =========================================================
+       👤 USERS
+       ========================================================= */
+
+    private List<UserDTO> fetchUsers() {
+
+        try {
+
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(USERS_URL))
+                            .header(
+                                    "X-SERVICE-KEY",
+                                    SERVICE_API_KEY
+                            )
+                            .GET()
+                            .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            UserDTO[].class
+                    )
+            );
 
         } catch (Exception e) {
-            logger.error("JS DB unavailable: {}", e.getMessage());
-            return "ERROR";
+
+            logger.error("Cannot fetch users", e);
+
+            return List.of();
         }
     }
 
-    private String fetchCategoryFromUrl(String url, String jsonKey) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
 
-        HttpResponse<String> response =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    /* =========================================================
+       🔔 SUBSCRIPTIONS
+       ========================================================= */
 
-        String json = response.body();
-        String key = "\"" + jsonKey + "\":";
-        int index = json.indexOf(key) + key.length();
+    private List<SubscribedUserDTO> fetchSubscriptions(
+            int userId
+    ) {
 
-        return json.substring(index)
-                .replaceAll("[^0-9]", "");
+        try {
+
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(
+                                    URI.create(
+                                            SUBSCRIPTIONS_URL + userId
+                                    )
+                            )
+                            .header(
+                                    "X-SERVICE-KEY",
+                                    SERVICE_API_KEY
+                            )
+                            .GET()
+                            .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            SubscribedUserDTO[].class
+                    )
+            );
+
+        } catch (Exception e) {
+
+            logger.warn(
+                    "No subscriptions for user {}",
+                    userId
+            );
+
+            return List.of();
+        }
+    }
+
+
+    /* =========================================================
+       🎬 VIDEOS
+       ========================================================= */
+
+    private List<VideoDTO> fetchVideosOfSubscribedUsers(
+            List<SubscribedUserDTO> users
+    ) {
+
+        List<VideoDTO> result = new ArrayList<>();
+
+        for (SubscribedUserDTO user : users) {
+
+            try {
+
+                HttpRequest request =
+                        HttpRequest.newBuilder()
+                                .uri(
+                                        URI.create(
+                                                USER_VIDEOS_URL + user.id()
+                                        )
+                                )
+                                .header(
+                                        "X-SERVICE-KEY",
+                                        SERVICE_API_KEY
+                                )
+                                .GET()
+                                .build();
+
+                HttpResponse<String> response =
+                        httpClient.send(
+                                request,
+                                HttpResponse.BodyHandlers.ofString()
+                        );
+
+                result.addAll(
+                        Arrays.asList(
+                                mapper.readValue(
+                                        response.body(),
+                                        VideoDTO[].class
+                                )
+                        )
+                );
+
+            } catch (Exception e) {
+
+                logger.warn(
+                        "Cannot fetch videos for {}",
+                        user.id()
+                );
+            }
+        }
+
+        return result;
+    }
+
+
+    /* =========================================================
+       ❤️ LIKES
+       ========================================================= */
+
+    private List<LikedVideoDTO> fetchLikedVideos(
+            int userId
+    ) {
+
+        try {
+
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(
+                                    URI.create(
+                                            USER_LIKED_URL + userId + "/liked"
+                                    )
+                            )
+                            .header(
+                                    "X-SERVICE-KEY",
+                                    SERVICE_API_KEY
+                            )
+                            .GET()
+                            .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            LikedVideoDTO[].class
+                    )
+            );
+
+        } catch (Exception e) {
+
+            logger.warn(
+                    "No liked videos for user {}",
+                    userId
+            );
+
+            return List.of();
+        }
+    }
+
+
+    /* =========================================================
+       📊 CATEGORY LOGIC
+       ========================================================= */
+
+    private String calculateCategoryFromVideos(
+            List<VideoDTO> videos
+    ) {
+
+        return videos.stream()
+
+                .map(VideoDTO::category)
+
+                .filter(Objects::nonNull)
+
+                .collect(Collectors.groupingBy(
+                        c -> c,
+                        Collectors.counting()
+                ))
+
+                .entrySet()
+
+                .stream()
+
+                .max(Map.Entry.comparingByValue())
+
+                .map(Map.Entry::getKey)
+
+                .orElse("OTHER");
+    }
+
+
+    private String calculateCategoryFromLikes(
+            List<LikedVideoDTO> videos
+    ) {
+
+        if (videos.isEmpty()) {
+            return "OTHER";
+        }
+
+        return videos.stream()
+
+                .map(LikedVideoDTO::category)
+
+                .filter(Objects::nonNull)
+
+                .collect(Collectors.groupingBy(
+                        c -> c,
+                        Collectors.counting()
+                ))
+
+                .entrySet()
+
+                .stream()
+
+                .max(Map.Entry.comparingByValue())
+
+                .map(Map.Entry::getKey)
+
+                .orElse("OTHER");
     }
 }
