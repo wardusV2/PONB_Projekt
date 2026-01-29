@@ -45,7 +45,8 @@ public class SecurityConfig {
                         "/subscriber/**",
                         "/getSubscriptions/**",
                         "/videosByUser/**",
-                        "/users/**")
+                        "/users/**",
+                        "/AllVideos/**")
 
                 .csrf(csrf -> csrf.disable())
 

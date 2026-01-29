@@ -88,7 +88,10 @@ const VideoPlayer = () => {
         
         // Pobierz rekomendacje
         const allVideos = await axios.get('http://localhost:8080/AllVideos', { 
-          withCredentials: true 
+          withCredentials: true ,
+          headers : {
+            "X-SERVICE-KEY": "SUPER_SECRET_SERVICE_KEY_123",
+          }
         });
         setRecommended(allVideos.data.filter(v => v.id !== parseInt(id)));
         

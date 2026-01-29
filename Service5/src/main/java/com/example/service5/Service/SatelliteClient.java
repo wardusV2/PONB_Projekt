@@ -3,6 +3,7 @@ package com.example.service5.Service;
 import com.example.mainservice.DTO.ServiceMessage;
 import com.example.service5.DTO.MostWatchedCategoryMessage;
 import com.example.service5.DTO.UserDTO;
+import com.example.service5.DTO.VideoDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Component
 public class SatelliteClient {
@@ -36,6 +38,9 @@ public class SatelliteClient {
     private static final String USERS_URL =
             "http://localhost:8080/api/users/all";
 
+    private static final String VIDEOS_URL =
+            "http://localhost:8080/AllVideos";
+
     @Value("${satellite.name:Service5}")
     private String serviceName;
 
@@ -46,20 +51,9 @@ public class SatelliteClient {
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
-    private final Random random = new Random();
-
-    private static final List<String> RANDOM_CATEGORIES = List.of(
-            "ACTION",
-            "DRAMA",
-            "COMEDY",
-            "HORROR",
-            "SCI_FI",
-            "ROMANCE",
-            "DOCUMENTARY"
-    );
 
     /* =========================================================
-        CONNECT TO MAIN SERVICE
+       CONNECT TO MAIN SERVICE
        ========================================================= */
     @PostConstruct
     public void connect() {
@@ -91,7 +85,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-        MAIN LOOP
+       MAIN LOOP
        ========================================================= */
     private void startSendingLoop() {
 
@@ -107,15 +101,16 @@ public class SatelliteClient {
 
             try {
                 List<UserDTO> users = fetchUsers();
+                List<VideoDTO> videos = fetchVideos();
 
                 for (UserDTO user : users) {
 
-                    String randomCategory = randomCategory();
+                    String bestCategory = calculateMostPopularCategory(videos);
 
                     MostWatchedCategoryMessage payload =
                             new MostWatchedCategoryMessage(
                                     user.id(),
-                                    randomCategory
+                                    bestCategory
                             );
 
                     ServiceMessage message =
@@ -128,15 +123,15 @@ public class SatelliteClient {
                     int msgNum = messageCounter.incrementAndGet();
 
                     logger.info(
-                            "Sending #{} → user {} → RANDOM({})",
+                            "Sending #{} → user {} → DB({})",
                             msgNum,
                             user.id(),
-                            randomCategory
+                            bestCategory
                     );
 
                     session.send("/app/from-service", message);
 
-                    Thread.sleep(300); // throttling jak w service1
+                    Thread.sleep(300); // throttling
                 }
 
             } catch (Exception e) {
@@ -147,7 +142,7 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-        FETCH USERS FROM REST
+       FETCH USERS FROM REST
        ========================================================= */
     private List<UserDTO> fetchUsers() {
 
@@ -178,11 +173,51 @@ public class SatelliteClient {
     }
 
     /* =========================================================
-        RANDOM CATEGORY
+       FETCH VIDEOS FROM REST
        ========================================================= */
-    private String randomCategory() {
-        return RANDOM_CATEGORIES.get(
-                random.nextInt(RANDOM_CATEGORIES.size())
-        );
+    private List<VideoDTO> fetchVideos() {
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(VIDEOS_URL))
+                    .header("X-SERVICE-KEY", SERVICE_API_KEY)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            return Arrays.asList(
+                    mapper.readValue(
+                            response.body(),
+                            VideoDTO[].class
+                    )
+            );
+
+        } catch (Exception e) {
+            logger.error("Cannot fetch videos", e);
+            return List.of();
+        }
+    }
+
+    /* =========================================================
+       CALCULATE MOST POPULAR CATEGORY
+       ========================================================= */
+    private String calculateMostPopularCategory(List<VideoDTO> videos) {
+
+        return videos.stream()
+                .filter(v -> v.getCategory() != null)
+                .collect(Collectors.groupingBy(
+                        VideoDTO::getCategory,
+                        Collectors.counting()
+                ))
+                .entrySet()
+                .stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("NONE");
     }
 }
